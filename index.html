@@ -571,7 +571,7 @@ const demo = {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
       const trips = d.trips.filter(t => t.status === 'open').map(t => {
         const car = DEMO_CFG.cars.find(c => c.id === t.car); let stops = []; try { stops = JSON.parse(t.stopsJson || '[]'); } catch (e) {}
-        return { id: t.id, car: t.car, carName: car.name, plate: car.plate, driver: t.driver, purpose: t.purpose, startTime: t.startTime,
+        return { id: t.id, car: t.car, carName: car.name, plate: car.plate, driver: t.driver, purpose: t.purpose, startTime: t.startTime, routePoly: t.routePoly || '',
           startOdo: t.startOdo, expectedKm: t.expectedKm, stops, points: (d.track[t.id] || []).map(q => [q.t, q.lat, q.lng]) };
       });
       const v = demoVirtual(d); if (v) trips.push(v);
@@ -581,7 +581,7 @@ const demo = {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
       const t = d.trips.find(x => x.id === p.tripId);
       let stops = []; try { stops = JSON.parse(t?.stopsJson || '[]'); } catch (e) {}
-      return { points: d.track[p.tripId] || [], stops, company: R.company };
+      return { points: d.track[p.tripId] || [], stops, company: R.company, routePoly: t?.routePoly || '' };
     }
     if (action === 'checkout') {
       const odo = +p.odo;
@@ -596,11 +596,11 @@ const demo = {
       }
       if (outside(now)) flags.push('นำรถออกนอกเวลางาน');
       ageFlag(p.photoAgeMin, 'รับรถ', flags);
-      let expKm = ''; try { expKm = demoRoute(p.stops || p.destination).totalKm; } catch (e) {}
+      let expKm = '', rpoly = ''; try { const rr = demoRoute(p.stops || p.destination); expKm = rr.totalKm; rpoly = rr.poly; } catch (e) {}
       const t = { id: Math.random().toString(36).slice(2, 10), status: 'open', car: p.car, driver: who === 'ผู้ดูแล' ? p.driver : who, purpose: p.purpose.trim(),
         destination: (p.destination || '').trim(), startTime: now.toISOString(), startOdo: odo, startPhoto: p.photo,
         startLat: p.lat ?? '', startLng: p.lng ?? '', expectedKm: expKm, endTime: '', endOdo: '', endPhoto: '', endLat: '', endLng: '',
-        distance: '', fuelLiters: '', fuelBaht: '', note: '', flags: flags.join(' | '), stopsJson: JSON.stringify(p.stops || []) };
+        distance: '', fuelLiters: '', fuelBaht: '', note: '', flags: flags.join(' | '), stopsJson: JSON.stringify(p.stops || []), routePoly: rpoly };
       d.trips.push(t); this.save(d);
       return { id: t.id, flags, expectedKm: expKm };
     }
@@ -710,7 +710,9 @@ function demoRoute(stops) {
   const legs = stops.map((x, i) => ({ to: x, address: objs[i].address || '', km: 4 + h(x + i) % 23 + (h(x) % 10) / 10, min: 0 }));
   legs.push({ to: 'กลับบริษัท', address: '', km: 6 + h(stops.join()) % 20, min: 0 });
   legs.forEach(l => { l.km = Math.round(l.km * 10) / 10; l.min = Math.round(l.km * 2.2); });
-  return { legs, totalKm: Math.round(legs.reduce((a, l) => a + l.km, 0)), totalMin: legs.reduce((a, l) => a + l.min, 0), demo: true };
+  const C = DEMO_CFG.rules.company, pts = objs.filter(o => o.lat != null && o.lat !== '').map(o => ({ lat: +o.lat, lng: +o.lng }));
+  const poly = C && pts.length ? demoRoad([C, ...pts, C]) : '';
+  return { legs, totalKm: Math.round(legs.reduce((a, l) => a + l.km, 0)), totalMin: legs.reduce((a, l) => a + l.min, 0), poly, demo: true };
 }
 // โหมดทดลอง: รถจำลองอีกคันที่วิ่งอยู่ (เร่งเวลา 4 เท่า) ให้เห็นหน้าติดตามสด
 const DEMO_V = { t0: 0 };
@@ -732,14 +734,14 @@ function demoVirtual(d) {
   if (tm < vmin) { DEMO_V.t0 = Date.now(); }                       // วนรอบใหม่เมื่อกลับถึงบริษัท
   const nowMs = Date.now(), last = pts[pts.length - 1][0];
   return { id: 'virtual', car: car.id, carName: car.name, plate: car.plate, driver: 'สมหญิง', purpose: 'ส่งของ',
-    startTime: new Date(nowMs - vmin * 60000).toISOString(), startOdo: 18310, expectedKm: 42, stops,
+    startTime: new Date(nowMs - vmin * 60000).toISOString(), startOdo: 18310, expectedKm: 42, stops, routePoly: DEMO_V.poly || (DEMO_V.poly = demoRoad([C, stops[0], stops[1], C])),
     points: pts.map(([m, lat, lng]) => [nowMs - (last - m) * 60000 - 2000, lat + Math.sin(m * 7) * .0004, lng + Math.cos(m * 5) * .0004]) };
 }
 function seedData() {
   const trips = seedTrips(), track = {};
   const t3 = trips.find(t => t.id === 'demo3'), C = DEMO_CFG.rules.company;
   const shop = { name: 'โฮมโปร บางนา', address: 'ถนนบางนา-ตราด แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร', lat: 13.6655, lng: 100.6445 };
-  t3.stopsJson = JSON.stringify([shop]);
+  t3.stopsJson = JSON.stringify([shop]); t3.routePoly = demoRoad([C, shop, C]);
   // จำลองเส้นทาง: ไปโฮมโปร แล้วแวะไกลออกไปทางมีนบุรีก่อนกลับ
   track.demo3 = genTrack([C, shop, { lat: 13.79, lng: 100.73 }, C], new Date(t3.startTime).getTime(), 0.8);
   t3.endTime = new Date(track.demo3[track.demo3.length - 1].t + 4 * 60000).toISOString();
@@ -1062,7 +1064,7 @@ async function showMap(trip) {
   const car = carOf(trip.car);
   o.innerHTML = `<div class="maphead"><b>${esc(trip.driver)}, ${esc(car.name)} ${fdt(trip.startTime)}</b><button id="mclose">ปิด</button></div>
     <div id="map"><p class="empty" style="margin:16px">กำลังโหลดเส้นทาง…</p></div>
-    <div class="legend"><span><i style="background:#E11D2E"></i>เส้นทางจริงจาก GPS</span><span><i style="background:repeating-linear-gradient(90deg,#8A8A93 0 5px,transparent 5px 9px)"></i>เส้นทางที่วางไว้</span><span><i style="background:#fff;border:2px solid #111113;height:10px;width:10px;border-radius:50%;box-sizing:border-box"></i>จุดแวะ</span></div>`;
+    <div class="legend"><span><i style="background:#E11D2E"></i>เส้นทางจริงจาก GPS</span><span><i style="background:#4B5563"></i>เส้นทางที่วางไว้ (ตามถนน)</span><span><i style="background:#fff;border:2px solid #111113;height:10px;width:10px;border-radius:50%;box-sizing:border-box"></i>จุดแวะ</span></div>`;
   document.body.appendChild(o);
   $('mclose').onclick = () => o.remove();
   let r;
@@ -1075,8 +1077,8 @@ async function showMap(trip) {
   $('map').innerHTML = '';
   const m = L.map('map', { zoomControl: true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
-  const plan = r.company ? [r.company, ...stops, r.company] : stops;
-  if (plan.length > 1) L.polyline(plan.map(p => [p.lat, p.lng]), { color: '#8A8A93', weight: 3, dashArray: '6 8' }).addTo(m);
+  const plan = roadOf(r.routePoly, r.company, stops);
+  drawPlan(m, plan, false);
   const line = L.polyline(pts, { color: '#E11D2E', weight: 5, opacity: .9 }).addTo(m);
   if (r.company) L.marker([r.company.lat, r.company.lng], { icon: hqIcon() }).bindTooltip('บริษัท').addTo(m);
   stops.forEach((p, i) => L.marker([p.lat, p.lng], { icon: stopIcon(i + 1, false) })
@@ -1085,6 +1087,45 @@ async function showMap(trip) {
   L.marker(pts[pts.length - 1], { icon: carIcon('', 'ok', lastDeg), zIndexOffset: 1000 }).bindTooltip('ตำแหน่งสุดท้าย').addTo(m);
   const bb = line.getBounds(); if (plan.length) bb.extend(L.latLngBounds(plan.map(p => [p.lat, p.lng])));
   m.fitBounds(bb, { padding: [30, 30] });
+}
+
+// ---------- เส้นทางตามถนนจริง (Google encoded polyline) ----------
+function decodePoly(str) {
+  if (!str) return [];
+  const out = []; let i = 0, lat = 0, lng = 0;
+  while (i < str.length) {
+    for (const k of [0, 1]) {
+      let shift = 0, res = 0, b;
+      do { b = str.charCodeAt(i++) - 63; res |= (b & 31) << shift; shift += 5; } while (b >= 32 && i < str.length + 1);
+      const d = res & 1 ? ~(res >> 1) : res >> 1;
+      if (k === 0) lat += d; else lng += d;
+    }
+    out.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return out;
+}
+function encodePoly(pts) {
+  let out = '', plat = 0, plng = 0;
+  const enc = v => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 32) { s += String.fromCharCode((32 | (v & 31)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); };
+  pts.forEach(p => { const la = Math.round(p.lat * 1e5), ln = Math.round(p.lng * 1e5); out += enc(la - plat) + enc(ln - plng); plat = la; plng = ln; });
+  return out;
+}
+// โหมดทดลอง: เส้นถนนสมมติที่โค้งไปมาเล็กน้อย
+function demoRoad(points) {
+  const out = [];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i], n = 24;
+    for (let k = 0; k < n; k++) { const f = k / n, w = Math.sin(f * Math.PI) * 0.004 * Math.sin(f * 9 + i); out.push({ lat: a.lat + (b.lat - a.lat) * f + w, lng: a.lng + (b.lng - a.lng) * f - w }); }
+  }
+  out.push(points[points.length - 1]);
+  return encodePoly(out);
+}
+const roadOf = (poly, company, stops) => { const r = decodePoly(poly); return r.length > 1 ? r : (company ? [company, ...stops, company] : stops); };
+// เส้นทางที่วางไว้: เส้นถนนจริงสีเทาเข้ม มีขอบขาว
+function drawPlan(layer, road, strong) {
+  if (road.length < 2) return;
+  L.polyline(road.map(p => [p.lat, p.lng]), { color: '#ffffff', weight: strong ? 9 : 7, opacity: .95 }).addTo(layer);
+  L.polyline(road.map(p => [p.lat, p.lng]), { color: '#4B5563', weight: strong ? 5 : 4, opacity: .75 }).addTo(layer);
 }
 
 // ---------- แผนที่ (ใช้ร่วมกันทั้งหน้าคนขับและหน้าติดตามสด) ----------
@@ -1183,7 +1224,7 @@ function bearing(a, b) {
 const agoText = ms => { const s = Math.max(0, Math.round(ms / 1000)); return s < 60 ? `${s} วินาทีที่แล้ว` : s < 3600 ? `${Math.round(s / 60)} นาทีที่แล้ว` : `${Math.round(s / 3600)} ชม.ที่แล้ว`; };
 
 /** สถานะของเที่ยว: ผ่านจุดไหนแล้ว กำลังไปไหน ออกนอกเส้นทางไหม (pts = [{t,lat,lng}]) */
-function tripState(pts, stops, company, R) {
+function tripState(pts, stops, company, R, road) {
   const visited = stops.map(s => pts.some(p => kmBetween(p, s) < 0.35));
   const last = pts[pts.length - 1], prev = pts.length > 1 ? pts[pts.length - 2] : null;
   let km = 0; for (let i = 1; i < pts.length; i++) { const d = kmBetween(pts[i - 1], pts[i]); if (d >= 0.02) km += d; }
@@ -1194,7 +1235,7 @@ function tripState(pts, stops, company, R) {
     const d = kmBetween(prev, last); st.speed = d / Math.max((last.t - prev.t) / 36e5, 1e-6); if (d > 0.02) st.deg = bearing(prev, last);
   }
   if (company && stops.length) {
-    const path = [company, ...stops, company]; let b = Infinity;
+    const path = road && road.length > 1 ? road : [company, ...stops, company]; let b = Infinity;
     for (let i = 1; i < path.length; i++) b = Math.min(b, segDistKm(last, path[i - 1], path[i]));
     st.off = b > R.offrouteKm ? b : 0;
   }
@@ -1216,8 +1257,7 @@ function stepper(stops, st) {
 }
 function drawTripLayers(layer, trip, pts, stops, company, st, selected) {
   layer.clearLayers();
-  const plan = company ? [company, ...stops, company] : stops;
-  if (selected && plan.length > 1) L.polyline(plan.map(p => [p.lat, p.lng]), { color: '#8A8A93', weight: 3, dashArray: '6 9', opacity: .8 }).addTo(layer);
+  if (selected) drawPlan(layer, roadOf(trip.routePoly, company, stops), true);
   if (pts.length > 1) {
     L.polyline(pts.map(p => [p.lat, p.lng]), { color: '#ffffff', weight: selected ? 9 : 6, opacity: .9 }).addTo(layer);
     L.polyline(pts.map(p => [p.lat, p.lng]), { color: st.off ? '#D97706' : '#E11D2E', weight: selected ? 5 : 3, opacity: selected ? 1 : .55 }).addTo(layer);
@@ -1269,7 +1309,7 @@ function liveDraw(refit) {
   const rows = trips.map(t => {
     const pts = (t.points || []).map(p => ({ t: p[0], lat: p[1], lng: p[2] }));
     const stops = (t.stops || []).filter(s => s.lat !== '' && s.lat != null).map(s => ({ lat: +s.lat, lng: +s.lng, name: s.name }));
-    const st = tripState(pts, stops, company, R), sel = MAPS.sel === t.id;
+    const st = tripState(pts, stops, company, R, roadOf(t.routePoly, company, stops)), sel = MAPS.sel === t.id;
     if (!L0.layers[t.id]) L0.layers[t.id] = L.layerGroup().addTo(m);
     drawTripLayers(L0.layers[t.id], t, pts, stops, company, st, sel);
     return { t, pts, stops, st, sel };
@@ -1330,8 +1370,8 @@ function renderDrive(c) {
   m.on('dragstart', () => { MAPS.follow = false; });
   $('dme').onclick = () => { MAPS.follow = true; trRender(); };
   if (company) L.marker([company.lat, company.lng], { icon: hqIcon() }).bindTooltip('บริษัท').addTo(m);
-  const plan = company ? [company, ...stops, company] : stops;
-  if (plan.length > 1) { L.polyline(plan.map(p => [p.lat, p.lng]), { color: '#8A8A93', weight: 3, dashArray: '6 9' }).addTo(m); m.fitBounds(L.latLngBounds(plan.map(p => [p.lat, p.lng])), mapPad()); }
+  const plan = roadOf(c.open.routePoly, company, stops);
+  if (plan.length > 1) { drawPlan(m, plan, true); m.fitBounds(L.latLngBounds(plan.map(p => [p.lat, p.lng])), mapPad()); }
   MAPS.drive = { map: m, layer: L.layerGroup().addTo(m), car: c };
   MAPS.follow = !plan.length;
   trRender();
@@ -1351,7 +1391,7 @@ function trRender() {
   const stops = tripStops(c.open), company = S.data.rules.company;
   const pts = S0.pts.map((p, i, a) => ({ lat: p[0], lng: p[1], t: i === a.length - 1 && S0.last ? S0.last.t : null }));
   if (S0.prev && pts.length > 1) pts[pts.length - 2].t = S0.prev.t;
-  const st = tripState(pts, stops, company, S.data.rules); st.stale = 0;
+  const st = tripState(pts, stops, company, S.data.rules, roadOf(c.open.routePoly, company, stops)); st.stale = 0;
   const s = stateText(st, stops);
   $('dNext').className = 'lstat ' + s.cls; $('dNext').innerHTML = `<span class="lsd"></span>${esc(s.text)}`;
   $('dStep').innerHTML = stops.length ? stepper(stops, st) : '';
