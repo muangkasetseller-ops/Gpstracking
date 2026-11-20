@@ -114,7 +114,7 @@ main.wide{max-width:920px}
 .shot.has{border:0;padding:0;background:none;min-height:0}
 
 /* ช่องกรอก */
-input.f,textarea.f{width:100%;font:inherit;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+input.f,textarea.f,select.f{width:100%;font:inherit;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
 input.f:focus,textarea.f:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--leaf)}
 textarea.f{min-height:70px;resize:vertical}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -245,6 +245,14 @@ body.fullmap main{max-width:none;padding:0}
 .hqsearch .f{box-shadow:0 2px 10px rgba(22,36,27,.2)}
 .hqsearch .res{margin:6px 0 0}
 .hqfoot{background:#fff;padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.sbox.off{opacity:.6}
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media (max-width:480px){.srow{grid-template-columns:1fr}}
+.pinrow{display:flex;gap:6px}.pinrow .f{font-family:var(--disp);font-size:18px;letter-spacing:2px}
+.tog{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:15px;cursor:pointer}
+.tog .small{flex-basis:100%;padding-left:28px}
+.tog input{width:20px;height:20px;accent-color:var(--green)}
 .rshot{min-height:110px;margin-top:12px}
 .rstat{font-size:14px;margin-top:8px;text-align:center}
 .rstat.ok{color:var(--green)}.rstat.warn{color:var(--brick)}
@@ -368,7 +376,7 @@ const n = v => (v === '' || v == null || isNaN(+v)) ? '' : (+v).toLocaleString('
 const fdt = s => s ? new Date(s).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '–';
 const ftime = s => s ? new Date(s).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.' : '';
 const flagsOf = t => t.flags ? String(t.flags).split(' | ').filter(Boolean) : [];
-const carOf = id => (S.data?.cars || []).find(c => c.id === id) || { name: id, plate: '' };
+const carOf = id => (S.data?.carsAll || S.data?.cars || []).find(c => c.id === id) || { name: id, plate: '' };
 const $ = id => document.getElementById(id);
 const me = () => store.get('fleet_driver');
 function toast(msg, ms = 2800) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); }
@@ -428,12 +436,20 @@ const DEMO_CFG = {
   rules: { workStart: 7, workEnd: 19, workDays: [1, 2, 3, 4, 5], gapKm: 2, extraPct: 30, extraMinKm: 10, maxHours: 10, photoMaxAge: 15, requireReceipt: true,
     gpsRequired: true, gpsGapMin: 10, offrouteKm: 5, company: { lat: 13.668, lng: 100.605 } },
 };
+function demoApply(st) {
+  DEMO_CFG.allCars = st.cars;
+  DEMO_CFG.cars = st.cars.filter(c => c.active !== false);
+  DEMO_CFG.drivers = st.drivers.filter(x => x.active !== false).map(x => x.name);
+  DEMO_CFG.pins = {}; st.drivers.filter(x => x.active !== false).forEach(x => DEMO_CFG.pins[x.pin] = x.name);
+  DEMO_CFG.driverList = st.drivers;
+}
 const demo = {
   load() {
     let d = null;
     try { d = JSON.parse(store.get('fleet_demo') || 'null'); } catch (e) {}
     if (!d) { d = seedData(); this.save(d); }
     d.track = d.track || {};
+    if (d.settings) demoApply(d.settings);
     return d;
   },
   save(d) { try { store.set('fleet_demo', JSON.stringify(d)); } catch (e) { toast('พื้นที่เก็บข้อมูลทดลองเต็ม'); } },
@@ -462,7 +478,20 @@ const demo = {
     }
     const who = p.pin === '9999' ? 'ผู้ดูแล' : DEMO_CFG.pins[p.pin];
     if (!who && !['trips', 'adminCheck', 'live', 'trackGet'].includes(action)) throw new Error('PIN ไม่ถูกต้อง');
+    if (action === 'settingsGet' || action === 'settingsSave') {
+      if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
+      if (action === 'settingsSave') {
+        if (p.adminPin && p.adminPin !== '9999') throw new Error('โหมดทดลองเปลี่ยน PIN ผู้ดูแลไม่ได้ (ของจริงเปลี่ยนได้)');
+        const pins = {}; for (const x of p.drivers) { if (!/^\d{4,8}$/.test(x.pin)) throw new Error(`PIN ของ ${x.name || 'พนักงาน'} ต้องเป็นตัวเลข 4–8 หลัก`); if (!x.name.trim()) throw new Error('กรอกชื่อพนักงานให้ครบ'); if (pins[x.pin]) throw new Error(`PIN ของ ${x.name} ซ้ำกับคนอื่น`); pins[x.pin] = 1; }
+        for (const c of p.cars) { if (!c.name.trim() || !c.plate.trim()) throw new Error('กรอกชื่อรุ่นและทะเบียนรถให้ครบทุกคัน'); if (!c.id) c.id = 'car' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+        d.settings = { cars: p.cars, drivers: p.drivers }; demoApply(d.settings); this.save(d);
+      }
+      return { cars: DEMO_CFG.allCars || DEMO_CFG.cars.map(c => ({ ...c, active: true })),
+        drivers: DEMO_CFG.driverList || Object.entries(DEMO_CFG.pins).map(([pin, name]) => ({ name, pin, active: true })),
+        adminDefault: true, company: R.company, fuelTypes: Object.entries(DEMO_CFG.fuel.labels).map(([id, label]) => ({ id, label })) };
+    }
     if (action === 'init') return {
+      carsAll: DEMO_CFG.allCars || DEMO_CFG.cars, adminDefault: true,
       drivers: DEMO_CFG.drivers, rules: R, fuel: DEMO_CFG.fuel,
       cars: DEMO_CFG.cars.map(c => Object.assign({}, c, { open: d.trips.find(t => t.car === c.id && t.status === 'open') || null, lastOdo: lastOdo(c.id) })),
     };
@@ -1626,7 +1655,8 @@ function drawReport() {
 
   $app.innerHTML = `
     <div class="bar"><input id="month" class="f" type="month" value="${S.month}" aria-label="เดือน"><span class="sp"></span>
-      <button class="btn sm line" id="csv">ดาวน์โหลด Excel</button><button class="btn sm line" id="logout">ออกจากรายงาน</button></div>
+      <button class="btn sm line" id="csv">ดาวน์โหลด Excel</button><button class="btn sm" id="settings">ตั้งค่า</button><button class="btn sm line" id="logout">ออก</button></div>
+    ${S.data.adminDefault && !DEMO ? '<div class="verdict warn hqwarn"><b>PIN ผู้ดูแลยังเป็นค่าเริ่มต้น (9999)</b><br>ใครก็เดาได้ กรุณาเปลี่ยนในหน้าตั้งค่า</div>' : ''}
     <button class="golive" id="golive"><span class="pulse"></span><span><b>ติดตามรถสด</b><br><span class="small">${S.data.cars.filter(c => c.open).length ? `ตอนนี้มีรถออกไป ${S.data.cars.filter(c => c.open).length} คัน ดูตำแหน่งบนแผนที่` : 'ดูตำแหน่งรถบนแผนที่แบบเรียลไทม์'}</span></span><span class="go">›</span></button>
     ${S.data.rules.company
       ? `<div class="hqrow"><span>ที่ตั้งบริษัท: <b>${esc(S.data.rules.company.name || 'ตั้งไว้แล้ว')}</b></span><button class="linkbtn" id="sethq">เปลี่ยน</button></div>`
@@ -1654,7 +1684,8 @@ function drawReport() {
       <div class="mt"><button class="btn sm line" id="print">พิมพ์ QR code</button></div></details>`;
 
   $('golive').onclick = renderLive;
-  $('sethq').onclick = companySheet;
+  $('settings').onclick = renderSettings;
+  $('sethq').onclick = () => companySheet();
   $('month').onchange = e => { S.month = e.target.value || monthKey(new Date()); drawReport(); };
   $('logout').onclick = () => { S.adminPin = null; S.trips = null; boot(); };
   $('csv').onclick = () => downloadCsv(list);
@@ -1671,8 +1702,75 @@ function drawReport() {
 }
 
 
+// ---------- หน้าตั้งค่า (ผู้ดูแลเท่านั้น) ----------
+async function renderSettings() {
+  header('ตั้งค่า', renderReport);
+  $app.classList.remove('wide');
+  $app.innerHTML = '<p class="empty">กำลังโหลด…</p>';
+  let st;
+  try { st = await call('settingsGet', { pin: S.adminPin }); }
+  catch (e) { $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const E = { cars: st.cars.map(c => ({ ...c })), drivers: st.drivers.map(d => ({ ...d })) };
+  const fuelOpts = sel => st.fuelTypes.map(f => `<option value="${f.id}" ${f.id === sel ? 'selected' : ''}>${esc(f.label)}</option>`).join('');
+  const randPin = () => { let p; do { p = String(Math.floor(100000 + Math.random() * 900000)); } while (E.drivers.some(d => d.pin === p) || p === '999999'); return p; };
+  const draw = () => {
+    $app.innerHTML = `
+      <h2 class="title">ตั้งค่า</h2><p class="lead">เฉพาะผู้ดูแลเท่านั้นที่เข้าหน้านี้ได้ แก้แล้วกดบันทึกด้านล่าง</p>
+
+      <h3 class="h2">ที่ตั้งบริษัท</h3>
+      <div class="sbox"><div class="lrow"><div class="lwho"><b>${st.company ? esc(st.company.name || 'ตั้งไว้แล้ว') : 'ยังไม่ได้ตั้ง'}</b>
+        <span>${st.company ? `${st.company.lat.toFixed(5)}, ${st.company.lng.toFixed(5)}` : 'ต้องตั้งก่อน ระบบถึงจะคำนวณระยะทางได้'}</span></div>
+        <button class="btn sm ${st.company ? 'line' : ''}" id="sHq">${st.company ? 'เปลี่ยน' : 'ตั้งเลย'}</button></div></div>
+
+      <h3 class="h2">รถบริษัท</h3>
+      ${E.cars.map((c, i) => `<div class="sbox ${c.active === false ? 'off' : ''}">
+        <div class="srow"><div><div class="lbl">รุ่นรถ</div><input class="f" data-c="${i}" data-k="name" value="${esc(c.name)}" placeholder="เช่น Toyota Hilux Revo"></div>
+          <div><div class="lbl">ทะเบียน (รวมจังหวัด)</div><input class="f" data-c="${i}" data-k="plate" value="${esc(c.plate)}" placeholder="เช่น กข 1234 กรุงเทพมหานคร"></div></div>
+        <div class="srow"><div><div class="lbl">ชนิดน้ำมัน</div><select class="f" data-c="${i}" data-k="fuel">${fuelOpts(c.fuel)}</select></div>
+          <div><div class="lbl">กินน้ำมันประมาณ (กม./ลิตร)</div><input class="f" type="number" inputmode="decimal" data-c="${i}" data-k="kmPerLiter" value="${esc(c.kmPerLiter)}"></div></div>
+        <label class="tog"><input type="checkbox" data-c="${i}" data-k="active" ${c.active !== false ? 'checked' : ''}> ใช้งานอยู่ <span class="small">(ปิดเมื่อขายรถหรือเลิกใช้ ประวัติเดิมยังอยู่)</span></label>
+      </div>`).join('')}
+      <button class="add" id="sAddCar" style="padding-left:0">+ เพิ่มรถ</button>
+
+      <h3 class="h2">พนักงานที่ใช้รถ</h3>
+      <p class="small" style="margin-top:-6px">PIN ต้องเป็นตัวเลข 4–8 หลักและห้ามซ้ำกัน กด "สุ่ม" เพื่อสร้าง PIN ใหม่ แล้วแจ้งพนักงานแต่ละคนเป็นการส่วนตัว</p>
+      ${E.drivers.map((d, i) => `<div class="sbox ${d.active === false ? 'off' : ''}">
+        <div class="srow"><div><div class="lbl">ชื่อ</div><input class="f" data-d="${i}" data-k="name" value="${esc(d.name)}" placeholder="ชื่อเล่นหรือชื่อจริง"></div>
+          <div><div class="lbl">PIN</div><div class="pinrow"><input class="f" data-d="${i}" data-k="pin" value="${esc(d.pin)}" inputmode="numeric" maxlength="8" autocomplete="off"><button class="btn sm line" data-rand="${i}" type="button">สุ่ม</button></div></div></div>
+        <label class="tog"><input type="checkbox" data-d="${i}" data-k="active" ${d.active !== false ? 'checked' : ''}> ใช้งานอยู่ <span class="small">(ปิดเมื่อพนักงานลาออก PIN นี้จะเข้าไม่ได้ทันที)</span></label>
+      </div>`).join('')}
+      <button class="add" id="sAddDrv" style="padding-left:0">+ เพิ่มพนักงาน</button>
+
+      <h3 class="h2">PIN ผู้ดูแล</h3>
+      <div class="sbox">${st.adminDefault ? '<p class="note warn" style="text-align:left;margin:0 0 10px">ยังเป็นค่าเริ่มต้น 9999 ควรเปลี่ยน</p>' : ''}
+        <div class="srow"><div><div class="lbl">PIN ผู้ดูแลใหม่</div><input class="f" id="sAdm" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="เว้นว่างถ้าไม่เปลี่ยน"></div>
+          <div><div class="lbl">พิมพ์ PIN ใหม่อีกครั้ง</div><input class="f" id="sAdm2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div></div></div>
+      <div class="dock"><button class="btn" id="sSave">บันทึกการตั้งค่า</button></div>`;
+    $app.querySelectorAll('[data-c]').forEach(el => el.oninput = el.onchange = () => { const c = E.cars[+el.dataset.c]; c[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox') draw(); });
+    $app.querySelectorAll('[data-d]').forEach(el => el.oninput = el.onchange = () => { const d = E.drivers[+el.dataset.d]; d[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value.trim(); if (el.type === 'checkbox') draw(); });
+    $app.querySelectorAll('[data-rand]').forEach(b => b.onclick = () => { E.drivers[+b.dataset.rand].pin = randPin(); draw(); });
+    $('sAddCar').onclick = () => { E.cars.push({ id: '', name: '', plate: '', fuel: 'diesel', kmPerLiter: 12, active: true }); draw(); };
+    $('sAddDrv').onclick = () => { E.drivers.push({ name: '', pin: randPin(), active: true }); draw(); };
+    $('sHq').onclick = () => companySheet(() => renderSettings());
+    $('sSave').onclick = async () => {
+      const a1 = $('sAdm').value.trim(), a2 = $('sAdm2').value.trim();
+      if (a1 && a1 !== a2) return toast('PIN ผู้ดูแลใหม่ทั้ง 2 ช่องไม่ตรงกัน');
+      if (a1 && !/^\d{4,8}$/.test(a1)) return toast('PIN ผู้ดูแลต้องเป็นตัวเลข 4–8 หลัก');
+      const b = $('sSave'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
+      try {
+        await call('settingsSave', { pin: S.adminPin, cars: E.cars, drivers: E.drivers, adminPin: a1 || undefined });
+        if (a1) S.adminPin = a1;
+        S.data = await call('init', { pin: S.adminPin });
+        toast('บันทึกการตั้งค่าแล้ว'); renderReport();
+      } catch (e) { toast(e.message, 5000); b.disabled = false; b.textContent = 'บันทึกการตั้งค่า'; }
+    };
+  };
+  draw();
+}
+
 // ตั้งที่ตั้งบริษัท: เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่บริษัท (แบบแอปเรียกรถ)
-function companySheet() {
+function companySheet(after) {
+  window.__afterHq = typeof after === 'function' ? after : null;
   const cur = S.data.rules.company;
   const o = document.createElement('div'); o.className = 'mapov';
   o.innerHTML = `<div class="maphead"><b>ตั้งที่ตั้งบริษัท</b><button id="hqclose">ปิด</button></div>
@@ -1718,7 +1816,7 @@ function companySheet() {
     if (!c) return toast('เลือกตำแหน่งก่อนนะครับ');
     try {
       const r = await call('setCompany', { pin: S.adminPin, lat: c.lat, lng: c.lng, name: $('hqname').value.trim() || 'บริษัท' });
-      S.data.rules.company = r; o.remove(); drawReport(); toast('บันทึกที่ตั้งบริษัทแล้ว');
+      S.data.rules.company = r; o.remove(); (window.__afterHq || drawReport)(); toast('บันทึกที่ตั้งบริษัทแล้ว');
     } catch (e) { toast(e.message, 4000); }
   };
 }
