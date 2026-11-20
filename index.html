@@ -989,15 +989,16 @@ function trAdd(pt) {
     if (d >= 0.02 && d / Math.max(dt / 3600, 1e-6) < 200) S0.km += d;
   }
   S0.prev = L; S0.last = pt; S0.n++; S0.queue.push(pt); S0.pts.push([+pt.lat.toFixed(5), +pt.lng.toFixed(5)]);
-  if (S0.pts.length > 1200) S0.pts = S0.pts.filter((x, i) => i % 2 === 0);
+  if (S0.pts.length > 1200) { S0.pts = S0.pts.filter((x, i) => i % 2 === 0); S0.snap = null; }
   S0.err = ''; trSave(); trRender();
 }
 async function trFlush() {
   const S0 = TR.st; if (!S0 || !S0.queue.length) return true;
   const batch = S0.queue.slice(0, 500);
   try {
-    await call('track', { tripId: S0.tripId, points: batch });
-    S0.queue.splice(0, batch.length); S0.sent = Date.now(); trSave(); trRender();
+    const r = await call('track', { tripId: S0.tripId, points: batch });
+    S0.queue.splice(0, batch.length);
+    if (r && r.snap && r.snap.length > 1) { S0.snap = r.snap; S0.snapAt = S0.pts.length - S0.queue.length; } S0.sent = Date.now(); trSave(); trRender();
     return S0.queue.length ? trFlush() : true;
   } catch (e) { S0.err = 'ส่งข้อมูลไม่สำเร็จ ระบบเก็บไว้ในเครื่องและจะลองส่งใหม่'; trRender(); return false; }
 }
@@ -1079,7 +1080,9 @@ async function showMap(trip) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
   const plan = roadOf(r.routePoly, r.company, stops);
   drawPlan(m, plan, false);
-  const line = L.polyline(pts, { color: '#E11D2E', weight: 5, opacity: .9 }).addTo(m);
+  const ln = r.snap && r.snap.length > 1 ? r.snap : pts; // เส้นที่วิ่งจริงแบบตามถนน
+  L.polyline(ln, { color: '#ffffff', weight: 9, opacity: .9 }).addTo(m);
+  const line = L.polyline(ln, { color: '#E11D2E', weight: 5, opacity: .9 }).addTo(m);
   if (r.company) L.marker([r.company.lat, r.company.lng], { icon: hqIcon() }).bindTooltip('บริษัท').addTo(m);
   stops.forEach((p, i) => L.marker([p.lat, p.lng], { icon: stopIcon(i + 1, false) })
     .bindTooltip(`${i + 1}. ${esc(p.name || '')}`, { permanent: true, direction: 'top' }).addTo(m));
@@ -1258,9 +1261,10 @@ function stepper(stops, st) {
 function drawTripLayers(layer, trip, pts, stops, company, st, selected) {
   layer.clearLayers();
   if (selected) drawPlan(layer, roadOf(trip.routePoly, company, stops), true);
-  if (pts.length > 1) {
-    L.polyline(pts.map(p => [p.lat, p.lng]), { color: '#ffffff', weight: selected ? 9 : 6, opacity: .9 }).addTo(layer);
-    L.polyline(pts.map(p => [p.lat, p.lng]), { color: st.off ? '#D97706' : '#E11D2E', weight: selected ? 5 : 3, opacity: selected ? 1 : .55 }).addTo(layer);
+  const ln = trip.snap && trip.snap.length > 1 ? trip.snap : pts.map(p => [p.lat, p.lng]); // ตามถนนถ้ามี
+  if (ln.length > 1) {
+    L.polyline(ln, { color: '#ffffff', weight: selected ? 9 : 6, opacity: .9 }).addTo(layer);
+    L.polyline(ln, { color: st.off ? '#D97706' : '#E11D2E', weight: selected ? 5 : 3, opacity: selected ? 1 : .55 }).addTo(layer);
   }
   if (selected) stops.forEach((s, i) => L.marker([s.lat, s.lng], { icon: stopIcon(i + 1, st.visited[i]), zIndexOffset: 100 }).bindTooltip(esc(s.name || ''), { direction: 'top' }).addTo(layer));
   if (st.last) {
@@ -1399,7 +1403,9 @@ function trRender() {
   if (MAPS.drive && MAPS.drive.car.open.id === S0.tripId) {
     const lay = MAPS.drive.layer; lay.clearLayers();
     stops.forEach((p, i) => L.marker([p.lat, p.lng], { icon: stopIcon(i + 1, st.visited[i]), zIndexOffset: 100 }).bindTooltip(esc(p.name || ''), { direction: 'top' }).addTo(lay));
-    if (pts.length > 1) { L.polyline(pts.map(p => [p.lat, p.lng]), { color: '#fff', weight: 9 }).addTo(lay); L.polyline(pts.map(p => [p.lat, p.lng]), { color: st.off ? '#D97706' : '#E11D2E', weight: 5 }).addTo(lay); }
+    // เส้นที่วิ่งจริงแบบตามถนน (จากเซิร์ฟเวอร์) ต่อด้วยจุดล่าสุดในเครื่องที่ยังไม่ได้ส่ง
+    const ln = S0.snap && S0.snapAt <= S0.pts.length ? S0.snap.concat(S0.pts.slice(Math.max(0, S0.snapAt - 1))) : S0.pts;
+    if (ln.length > 1) { L.polyline(ln, { color: '#fff', weight: 9 }).addTo(lay); L.polyline(ln, { color: st.off ? '#D97706' : '#E11D2E', weight: 5 }).addTo(lay); }
     if (st.last) {
       if (st.deg != null) MAPS.lastDeg = st.deg;
       L.marker([st.last.lat, st.last.lng], { icon: carIcon('', st.off ? 'off' : 'me', MAPS.lastDeg, true), zIndexOffset: 1000 }).addTo(lay);
