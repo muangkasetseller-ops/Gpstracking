@@ -237,6 +237,14 @@ body.fullmap main{max-width:none;padding:0}
 .trip.rv .fx{color:#8a5a45}
 .rvbox{margin-top:12px;background:var(--leaf);color:var(--green-d);border-radius:10px;padding:10px 12px;font-size:14px}
 .linkbtn{background:none;border:0;color:var(--green);font-weight:600;text-decoration:underline;padding:0 0 0 6px;font-size:14px}
+.hqrow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px;color:var(--muted);margin:-4px 2px 14px}
+.hqrow b{color:var(--ink)}
+.hqwarn{margin-bottom:16px}
+.centerpin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:600;pointer-events:none}
+.hqsearch{position:absolute;top:12px;left:12px;right:12px;z-index:700;max-width:520px}
+.hqsearch .f{box-shadow:0 2px 10px rgba(22,36,27,.2)}
+.hqsearch .res{margin:6px 0 0}
+.hqfoot{background:#fff;padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
 .rshot{min-height:110px;margin-top:12px}
 .rstat{font-size:14px;margin-top:8px;text-align:center}
 .rstat.ok{color:var(--green)}.rstat.warn{color:var(--brick)}
@@ -440,6 +448,11 @@ const demo = {
       await new Promise(r => setTimeout(r, 300));
       if (!DEMO_CFG.pins[p.pin]) throw new Error('PIN ไม่ถูกต้อง');
       return { name: DEMO_CFG.pins[p.pin] };
+    }
+    if (action === 'setCompany') {
+      if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
+      DEMO_CFG.rules.company = { lat: +p.lat, lng: +p.lng, name: p.name || 'บริษัท' };
+      return DEMO_CFG.rules.company;
     }
     if (action === 'review') {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
@@ -1615,6 +1628,9 @@ function drawReport() {
     <div class="bar"><input id="month" class="f" type="month" value="${S.month}" aria-label="เดือน"><span class="sp"></span>
       <button class="btn sm line" id="csv">ดาวน์โหลด Excel</button><button class="btn sm line" id="logout">ออกจากรายงาน</button></div>
     <button class="golive" id="golive"><span class="pulse"></span><span><b>ติดตามรถสด</b><br><span class="small">${S.data.cars.filter(c => c.open).length ? `ตอนนี้มีรถออกไป ${S.data.cars.filter(c => c.open).length} คัน ดูตำแหน่งบนแผนที่` : 'ดูตำแหน่งรถบนแผนที่แบบเรียลไทม์'}</span></span><span class="go">›</span></button>
+    ${S.data.rules.company
+      ? `<div class="hqrow"><span>ที่ตั้งบริษัท: <b>${esc(S.data.rules.company.name || 'ตั้งไว้แล้ว')}</b></span><button class="linkbtn" id="sethq">เปลี่ยน</button></div>`
+      : `<div class="verdict warn hqwarn"><b>ยังไม่ได้ตั้งที่ตั้งบริษัท</b><br>ระบบจึงยังคำนวณระยะทาง ตรวจออกนอกเส้นทาง และเช็กจุดคืนรถไม่ได้<div class="mt"><button class="btn sm" id="sethq">ตั้งที่ตั้งบริษัท</button></div></div>`}
     <div class="fleet">${S.data.cars.map(c => {
       const ts = closed.filter(t => t.car === c.id), fl = pending.filter(t => t.car === c.id).length;
       return `<div class="fcar"><div class="top">${plate(c.plate)}${fl ? `<span class="badge bad">ต้องตรวจ ${fl}</span>` : '<span class="badge ok">ปกติ</span>'}</div>
@@ -1638,6 +1654,7 @@ function drawReport() {
       <div class="mt"><button class="btn sm line" id="print">พิมพ์ QR code</button></div></details>`;
 
   $('golive').onclick = renderLive;
+  $('sethq').onclick = companySheet;
   $('month').onchange = e => { S.month = e.target.value || monthKey(new Date()); drawReport(); };
   $('logout').onclick = () => { S.adminPin = null; S.trips = null; boot(); };
   $('csv').onclick = () => downloadCsv(list);
@@ -1653,6 +1670,58 @@ function drawReport() {
   });
 }
 
+
+// ตั้งที่ตั้งบริษัท: เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่บริษัท (แบบแอปเรียกรถ)
+function companySheet() {
+  const cur = S.data.rules.company;
+  const o = document.createElement('div'); o.className = 'mapov';
+  o.innerHTML = `<div class="maphead"><b>ตั้งที่ตั้งบริษัท</b><button id="hqclose">ปิด</button></div>
+    <div style="position:relative;flex:1">
+      <div id="hqmap" style="position:absolute;inset:0"></div>
+      <div class="centerpin" aria-hidden="true">${hqIcon().options.html}</div>
+      <div class="hqsearch"><div class="stop" style="margin:0"><input class="f" id="hqq" placeholder="ค้นหาชื่อบริษัท หรือวางลิงก์ Google Maps" enterkeyhint="search"><button class="btn sm" id="hqfind">ค้นหา</button></div><div id="hqres"></div></div>
+    </div>
+    <div class="hqfoot">
+      <p class="small" style="margin:0 0 10px">เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่บริษัท หรือกดใช้ตำแหน่งปัจจุบันถ้าคุณอยู่ที่บริษัท</p>
+      <input class="f" id="hqname" placeholder="ชื่อเรียก เช่น บริษัท เมืองเกษตร" value="${esc(cur?.name && cur.name !== 'บริษัท' ? cur.name : '')}">
+      <div class="two mt"><button class="btn line" id="hqhere">ใช้ตำแหน่งปัจจุบัน</button><button class="btn" id="hqsave">บันทึกตำแหน่งนี้</button></div></div>`;
+  document.body.appendChild(o);
+  $('hqclose').onclick = () => o.remove();
+  if (!window.L) { $('hqmap').innerHTML = '<p class="empty" style="margin:16px">โหลดแผนที่ไม่ได้ ใช้ปุ่ม "ใช้ตำแหน่งปัจจุบัน" แทนได้</p>'; }
+  const m = window.L ? makeMap('hqmap') : null;
+  if (m) m.setView(cur ? [cur.lat, cur.lng] : [13.7563, 100.5018], cur ? 17 : 11);
+  let picked = null; // ใช้เมื่อไม่มีแผนที่
+  $('hqhere').onclick = async () => {
+    $('hqhere').textContent = 'กำลังหาตำแหน่ง…';
+    const p = await getPos();
+    $('hqhere').textContent = 'ใช้ตำแหน่งปัจจุบัน';
+    if (!p) return toast('หาตำแหน่งไม่ได้ ตรวจว่าอนุญาตให้เว็บใช้ตำแหน่งแล้ว', 4000);
+    picked = p; if (m) m.setView([p.lat, p.lng], 18); else toast('ได้ตำแหน่งแล้ว กดบันทึกได้เลย');
+  };
+  const find = async () => {
+    const q = $('hqq').value.trim(); if (!q) return;
+    $('hqres').innerHTML = '<div class="res"><div class="msg" style="color:var(--muted)">กำลังค้นหา…</div></div>';
+    try {
+      const rs = await call('place', { q, pin: S.adminPin });
+      $('hqres').innerHTML = `<div class="res">${rs.length ? rs.map((r, i) => `<button type="button" data-i="${i}"><b>${esc(r.name)}</b><span>${esc(r.address || '')}</span></button>`).join('') : '<div class="msg">ไม่พบ ลองพิมพ์ชื่ออื่น หรือวางลิงก์จาก Google Maps</div>'}</div>`;
+      $('hqres').querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
+        const r = rs[+b.dataset.i]; picked = r; $('hqres').innerHTML = '';
+        if (!$('hqname').value) $('hqname').value = r.name;
+        if (m) m.setView([r.lat, r.lng], 18);
+      });
+    } catch (e) { $('hqres').innerHTML = ''; toast(e.message, 4000); }
+  };
+  $('hqfind').onclick = find;
+  $('hqq').onkeydown = e => { if (e.key === 'Enter') find(); };
+  $('hqsave').onclick = async () => {
+    const c = m ? m.getCenter() : picked;
+    if (!c) return toast('เลือกตำแหน่งก่อนนะครับ');
+    try {
+      const r = await call('setCompany', { pin: S.adminPin, lat: c.lat, lng: c.lng, name: $('hqname').value.trim() || 'บริษัท' });
+      S.data.rules.company = r; o.remove(); drawReport(); toast('บันทึกที่ตั้งบริษัทแล้ว');
+    } catch (e) { toast(e.message, 4000); }
+  };
+}
 
 // ผู้ดูแลบันทึกว่าตรวจรายการแล้ว พร้อมหมายเหตุ
 function reviewSheet(t) {
