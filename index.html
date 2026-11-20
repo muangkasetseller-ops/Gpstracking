@@ -253,6 +253,7 @@ body.fullmap main{max-width:none;padding:0}
 .tog{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:15px;cursor:pointer}
 .tog .small{flex-basis:100%;padding-left:28px}
 .tog input{width:20px;height:20px;accent-color:var(--green)}
+.gmlink{display:block;text-align:center;margin-top:12px;font-weight:600;color:var(--green)}
 .rshot{min-height:110px;margin-top:12px}
 .rstat{font-size:14px;margin-top:8px;text-align:center}
 .rstat.ok{color:var(--green)}.rstat.warn{color:var(--brick)}
@@ -1319,6 +1320,15 @@ function trRender() {
   if ($('dStatus')) $('dStatus').textContent = TR.on ? (S0.n ? 'กำลังบันทึกเส้นทาง' : 'กำลังหาสัญญาณ GPS…') : 'หยุดบันทึกแล้ว';
 }
 
+// เปิดเส้นทางเดียวกันใน Google Maps ไว้เทียบ: บริษัท → จุดแวะ → บริษัท
+const hqName = () => (S.data?.rules?.company?.name && S.data.rules.company.name !== 'บริษัท') ? S.data.rules.company.name : 'บริษัท';
+function gmapsLink(stops) {
+  const C = S.data?.rules?.company; if (!C || !stops || !stops.length) return '';
+  const ll = p => `${(+p.lat).toFixed(6)},${(+p.lng).toFixed(6)}`;
+  return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + ll(C) + '&destination=' + ll(C)
+    + '&waypoints=' + encodeURIComponent(stops.map(ll).join('|'));
+}
+
 // ---------- ราคาน้ำมัน ----------
 const fuelPrice = k => S.data?.fuel?.prices?.[k] || 0;
 const fuelLabel = k => S.data?.fuel?.labels?.[k] || k || '';
@@ -1401,13 +1411,14 @@ function renderCheckout(c) {
     const start = +$('odo').value;
     const legs = r.legs;
     $('routeBox').innerHTML = `<div class="route"><ul class="rt">
-      <li class="hq"><span class="nm">บริษัท</span></li>
+      <li class="hq"><span class="nm">${esc(hqName())}</span><div class="ad">จุดเริ่มต้น</div></li>
       ${legs.map((l, i) => `<div class="leg">${n(l.km)} กม.</div>
         ${i < legs.length - 1 ? `<li><span class="nm">${i + 1}. ${esc(l.to)}</span>${l.address ? `<div class="ad">${esc(l.address)}</div>` : ''}</li>` : '<li class="hq"><span class="nm">กลับบริษัท</span></li>'}`).join('')}
       </ul>
       <div class="sum"><span>รวมไป-กลับ<br><span class="small">ขับประมาณ ${Math.floor(r.totalMin / 60) ? Math.floor(r.totalMin / 60) + ' ชม. ' : ''}${r.totalMin % 60} นาที</span></span><b>${n(r.totalKm)} กม.</b></div>
       ${tripCost(c, r.totalKm) ? `<div class="cost">ค่าน้ำมันโดยประมาณ <b>${n(tripCost(c, r.totalKm))} บาท</b> (${c.kmPerLiter} กม./ลิตร × ราคา${fuelLabel(c.fuel)}วันนี้ ${fuelPrice(c.fuel)} บาท)</div>` : ''}
       <div class="expect">${start ? `<p>กลับถึงบริษัท เลขไมล์ควรอยู่ที่ประมาณ</p>${odo(start + r.totalKm, 'lg hl')}` : '<p>กรอกเลขไมล์ในข้อ 2 แล้วจะเห็นว่าตอนกลับควรเป็นเลขเท่าไหร่</p>'}</div>
+      ${gmapsLink(picked()) ? `<a class="gmlink" href="${gmapsLink(picked())}" target="_blank" rel="noopener">ตรวจเส้นทางนี้ใน Google Maps ↗</a>` : ''}
       ${r.demo ? '<p class="fake">โหมดทดลองใช้ระยะทางสมมติ ของจริงคำนวณจาก Google Maps</p>' : ''}</div>`;
   };
   const calc = async () => {
@@ -1724,7 +1735,7 @@ async function renderSettings() {
 
       <h3 class="h2">ที่ตั้งบริษัท</h3>
       <div class="sbox"><div class="lrow"><div class="lwho"><b>${st.company ? esc(st.company.name || 'ตั้งไว้แล้ว') : 'ยังไม่ได้ตั้ง'}</b>
-        <span>${st.company ? `${st.company.lat.toFixed(5)}, ${st.company.lng.toFixed(5)}` : 'ต้องตั้งก่อน ระบบถึงจะคำนวณระยะทางได้'}</span></div>
+        <span>${st.company ? `<a href="https://www.google.com/maps?q=${st.company.lat},${st.company.lng}" target="_blank" rel="noopener">ดูตำแหน่งใน Google Maps ↗</a>` : 'ต้องตั้งก่อน ระบบถึงจะคำนวณระยะทางได้'}</span></div>
         <button class="btn sm ${st.company ? 'line' : ''}" id="sHq">${st.company ? 'เปลี่ยน' : 'ตั้งเลย'}</button></div></div>
 
       <h3 class="h2">รถบริษัท</h3>
