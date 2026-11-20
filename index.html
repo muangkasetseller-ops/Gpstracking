@@ -729,6 +729,7 @@ function seedTrips() {
 
 // ---------- ส่วนประกอบหน้าตา ----------
 const ICON = {
+  gear: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   car: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13.5 5.4 8.3A2 2 0 0 1 7.3 7h9.4a2 2 0 0 1 1.9 1.3l1.9 5.2"/><path d="M3 13.5h18v4a1 1 0 0 1-1 1h-1.5M3 13.5v4a1 1 0 0 0 1 1h1.5M8.5 18.5h7"/><circle cx="7" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
@@ -1044,8 +1045,9 @@ function makeMap(el) {
     m.attributionControl.addAttribution('แผนที่จำลองในโหมดทดลอง');
     m.setMaxBounds([[13.3, 100.2], [14.1, 101.1]]);
   } else {
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      { maxZoom: 19, subdomains: 'abcd', attribution: '© OpenStreetMap © CARTO' }).addTo(m);
+    // แผนที่ OpenStreetMap (ฟรี ไม่ต้องใช้ API key ชื่อถนนเป็นภาษาไทย)
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
   }
   return m;
 }
@@ -1614,6 +1616,8 @@ async function renderReport() {
 }
 
 function drawReport() {
+  header('รายงานการใช้รถ', boot, `<button class="hlink gear" id="hset" aria-label="ตั้งค่า">${ICON.gear} ตั้งค่า</button>`);
+  $('hset').onclick = renderSettings;
   const list = S.trips.filter(t => monthKey(t.startTime) === S.month);
   const closed = list.filter(t => t.status === 'closed');
   const flagged = list.filter(t => flagsOf(t).length);
@@ -1655,7 +1659,7 @@ function drawReport() {
 
   $app.innerHTML = `
     <div class="bar"><input id="month" class="f" type="month" value="${S.month}" aria-label="เดือน"><span class="sp"></span>
-      <button class="btn sm line" id="csv">ดาวน์โหลด Excel</button><button class="btn sm" id="settings">ตั้งค่า</button><button class="btn sm line" id="logout">ออก</button></div>
+      <button class="btn sm line" id="csv">ดาวน์โหลด Excel</button><button class="btn sm" id="settings">ตั้งค่ารถ / พนักงาน / PIN</button><button class="btn sm line" id="logout">ออก</button></div>
     ${S.data.adminDefault && !DEMO ? '<div class="verdict warn hqwarn"><b>PIN ผู้ดูแลยังเป็นค่าเริ่มต้น (9999)</b><br>ใครก็เดาได้ กรุณาเปลี่ยนในหน้าตั้งค่า</div>' : ''}
     <button class="golive" id="golive"><span class="pulse"></span><span><b>ติดตามรถสด</b><br><span class="small">${S.data.cars.filter(c => c.open).length ? `ตอนนี้มีรถออกไป ${S.data.cars.filter(c => c.open).length} คัน ดูตำแหน่งบนแผนที่` : 'ดูตำแหน่งรถบนแผนที่แบบเรียลไทม์'}</span></span><span class="go">›</span></button>
     ${S.data.rules.company
@@ -1664,7 +1668,7 @@ function drawReport() {
     <div class="fleet">${S.data.cars.map(c => {
       const ts = closed.filter(t => t.car === c.id), fl = pending.filter(t => t.car === c.id).length;
       return `<div class="fcar"><div class="top">${plate(c.plate)}${fl ? `<span class="badge bad">ต้องตรวจ ${fl}</span>` : '<span class="badge ok">ปกติ</span>'}</div>
-        <div style="font-family:var(--disp);font-weight:600;font-size:18px;margin-top:10px">${esc(c.name)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px"><span style="font-family:var(--disp);font-weight:600;font-size:18px">${esc(c.name)}</span><button class="linkbtn" data-edit="1">แก้ไขรถ</button></div>
         <div class="kpis"><div><b>${n(sum(ts, 'distance')) || 0}</b><span>กม.</span></div>
         <div><b>${list.filter(t => t.car === c.id).length}</b><span>ครั้ง</span></div>
         <div><b>${n(sum(ts, 'fuelBaht')) || 0}</b><span>เติมน้ำมัน (บาท)</span></div></div>
@@ -1685,6 +1689,7 @@ function drawReport() {
 
   $('golive').onclick = renderLive;
   $('settings').onclick = renderSettings;
+  $app.querySelectorAll('[data-edit]').forEach(b => b.onclick = renderSettings);
   $('sethq').onclick = () => companySheet();
   $('month').onchange = e => { S.month = e.target.value || monthKey(new Date()); drawReport(); };
   $('logout').onclick = () => { S.adminPin = null; S.trips = null; boot(); };
