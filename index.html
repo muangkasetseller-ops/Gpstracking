@@ -300,6 +300,26 @@ body.admin .atabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:6;
 .phlink{font-size:14px;margin-right:8px}
 .menuitem{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 4px;font-size:17px}
 .menuitem.warn{color:var(--brick)}
+.navban{position:absolute;top:calc(68px + env(safe-area-inset-top));left:12px;right:12px;max-width:640px;z-index:710;background:#0B5D2E;color:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px -8px rgba(0,0,0,.5);flex-wrap:wrap}
+.navban[hidden],#navbar[hidden],.btn[hidden],.linkbtn[hidden]{display:none}
+.nvic{width:46px;height:46px;flex-shrink:0;color:#fff}
+.nvtx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nvtx b{font-family:var(--disp);font-size:28px;line-height:1.1;font-weight:700}
+.nvtx span{font-size:17px;line-height:1.35;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.nvthen{width:100%;display:flex;align-items:center;gap:6px;font-size:14px;opacity:.85;border-top:1px solid rgba(255,255,255,.2);padding-top:6px}
+.nvthen svg{width:20px;height:20px}
+.nvbar{display:flex;align-items:center;gap:8px;padding:4px 0 10px}
+.nveta{flex:1;min-width:0;display:flex;flex-direction:column}
+.nveta b{font-family:var(--disp);font-size:24px;color:#0B8043;line-height:1.1}
+.nveta span{font-size:14px;color:var(--muted)}
+.nveta em{font-style:normal;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nvb{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nvb.stop{background:#E11D2E;border-color:#E11D2E;color:#fff;font-weight:700}
+.btn.navgo{background:#1A73E8;box-shadow:0 6px 16px -6px rgba(26,115,232,.6);margin-bottom:6px}
+.btn.navgo:active{background:#1558B0}
+.linkbtn{display:block;margin:0 auto 12px;background:none;border:0;color:var(--muted);text-decoration:underline;font-size:14px;padding:6px}
+.navflag{width:34px;height:40px;color:#0B5D2E;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+@media (min-width:900px){.navban{left:432px;right:16px;top:16px}}
 .applogo{display:block;width:min(300px,86%);height:auto;margin:0 auto 6px;mix-blend-mode:multiply}
 .appmark{padding:0;object-fit:cover;background:none;box-shadow:none}
 .brandmark{width:68px;height:68px;border-radius:20px;background:linear-gradient(145deg,#2A2A2F,#0D0D0F);color:#fff;display:flex;align-items:center;justify-content:center;margin:6px auto 14px;box-shadow:0 10px 24px -10px rgba(17,17,19,.6);position:relative}
@@ -559,6 +579,7 @@ const demo = {
       return action === 'trips' ? d.trips.slice().reverse() : true;
     }
     if (action === 'route') return demoRoute(p.stops);
+    if (action === 'nav') return demoNav(p.from, p.to);
     if (action === 'place') return demoPlace(p.q);
     if (action === 'receipt') { // โหมดทดลอง: แกล้งอ่านใบเสร็จ ของจริงใช้ OCR ของ Google Drive
       await new Promise(r => setTimeout(r, 900));
@@ -976,14 +997,15 @@ async function trStart(trip) {
   if (DEMO) trSimStart(trip);
   else if (navigator.geolocation) {
     TR.watch = navigator.geolocation.watchPosition(
-      p => trAdd({ t: Date.now(), lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy) }),
+      p => trAdd({ t: Date.now(), lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy), hd: p.coords.heading }),
       e => { TR.st.err = e.code === 1 ? 'ยังไม่ได้อนุญาตให้เว็บใช้ตำแหน่ง เปิดได้ที่ตั้งค่าเบราว์เซอร์ > ตำแหน่ง' : 'ยังหาสัญญาณ GPS ไม่เจอ ลองวางมือถือให้เห็นท้องฟ้า'; trRender(); },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 30000 });
   } else TR.st.err = 'มือถือเครื่องนี้ไม่รองรับ GPS';
   TR.timer = setInterval(trFlush, 20000); // ส่งทุก 20 วินาที ให้ผู้ดูแลดูได้แบบสด
   TR.tick = setInterval(trRender, 1000);
 }
 function trAdd(pt) {
+  if (pt.acc <= 100) navPos(pt);                               // นำทางใช้ทุกจุด ไม่รอ 15 วินาที
   const S0 = TR.st; if (!S0 || pt.acc > 100) return;           // ตัดจุดที่แม่นยำต่ำ
   const L = S0.last;
   if (L) {
@@ -1011,7 +1033,7 @@ async function trWake() {
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && TR.on) { trWake(); trFlush(); } });
 async function trStop() {
-  TR.on = false;
+  TR.on = false; navStop(true);
   if (TR.watch != null) navigator.geolocation.clearWatch(TR.watch);
   clearInterval(TR.timer); clearInterval(TR.tick); clearInterval(TR.sim);
   TR.watch = TR.timer = TR.tick = TR.sim = null;
@@ -1115,6 +1137,14 @@ function encodePoly(pts) {
   const enc = v => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 32) { s += String.fromCharCode((32 | (v & 31)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); };
   pts.forEach(p => { const la = Math.round(p.lat * 1e5), ln = Math.round(p.lng * 1e5); out += enc(la - plat) + enc(ln - plng); plat = la; plng = ln; });
   return out;
+}
+// โหมดทดลอง: นำทางเป็นเส้นตรงแบ่งเป็นช่วง ๆ พร้อมคำสั่งตัวอย่าง
+function demoNav(from, to) {
+  const n = 30, poly = [];
+  for (let k = 0; k <= n; k++) poly.push([from.lat + (to.lat - from.lat) * k / n, from.lng + (to.lng - from.lng) * k / n]);
+  const m = Math.round(kmBetween(from, to) * 1000), cut = [10, 20, 30];
+  const txt = [['', 'มุ่งหน้าไปตามถนนสายหลัก'], ['turn-right', 'เลี้ยวขวาเข้าสู่ ถนนพหลโยธิน'], ['turn-left', 'เลี้ยวซ้ายเข้าสู่ ซอยตัวอย่าง']];
+  return { poly, m, s: Math.round(m / 1000 / 35 * 3600), steps: cut.map((e, i) => ({ man: txt[i][0], text: txt[i][1], m: Math.round(m / 3), end: e })) };
 }
 // โหมดทดลอง: เส้นถนนสมมติที่โค้งไปมาเล็กน้อย
 function demoRoad(points) {
@@ -1359,7 +1389,9 @@ function renderDrive(c) {
     <div class="ftop"><button class="fbtn" id="dback" aria-label="กลับหน้าแรก">${ICON.back.replace('stroke="currentColor"', 'stroke="#111113"')}</button>
       <div class="fchip"><span class="pulse" id="dDot"></span><span id="dStatus">กำลังบันทึกเส้นทาง</span></div>
       <button class="fbtn" id="dme" aria-label="ไปที่ตำแหน่งของฉัน"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#111113" stroke-width="2.2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
+    <div class="navban" id="navban" hidden></div>
     <div class="bsheet" id="dsheet"><div class="handle" id="dhandle"></div>
+      <div id="navbar" hidden></div>
       <div class="lrow">${plate(c.plate)}<div class="lwho"><b>${esc(c.name)}</b><span>${esc(c.open.driver)}, ออก ${ftime(c.open.startTime)}</span></div></div>
       <div class="lstat ok" id="dNext"><span class="lsd"></span>…</div>
       <div id="dStep"></div>
@@ -1367,10 +1399,14 @@ function renderDrive(c) {
       <div id="dWarn"></div>
       <p class="tips">วางมือถือบนที่วางในรถ เปิดหน้านี้ค้างไว้และเสียบสายชาร์จ ถ้าปิดหน้าจอ ระบบจะหยุดบันทึกและแจ้งผู้ดูแล</p>
       ${DEMO ? '<button class="btn sm line" id="detour" style="margin-bottom:12px">จำลองแวะนอกเส้นทาง</button>' : ''}
-      <button class="btn" id="arrive">ถึงบริษัทแล้ว คืนรถ</button></div></div>`;
-  $('dback').onclick = renderHome;
+      <button class="btn navgo" id="navgo">${NAV_ICON} เริ่มนำทาง</button>
+      <button class="linkbtn" id="gmap">เปิดใน Google Maps แทน</button>
+      <button class="btn line" id="arrive">ถึงบริษัทแล้ว คืนรถ</button></div></div>`;
+  $('dback').onclick = () => { navStop(true); renderHome(); };
+  $('navgo').onclick = () => navStart(c);
+  $('gmap').onclick = () => navGmaps(c);
   $('dhandle').onclick = () => $('dsheet').classList.toggle('min');
-  $('arrive').onclick = () => renderCheckin(c);
+  $('arrive').onclick = () => { navStop(true); renderCheckin(c); };
   if ($('detour')) $('detour').onclick = () => { TR.detour = 12; toast('รถกำลังแวะออกนอกเส้นทาง'); };
   const m = makeMap('dmap'), company = S.data.rules.company, stops = tripStops(c.open);
   m.setView(company ? [company.lat, company.lng] : [13.75, 100.55], 13);
@@ -1399,6 +1435,7 @@ function trRender() {
   const pts = S0.pts.map((p, i, a) => ({ lat: p[0], lng: p[1], t: i === a.length - 1 && S0.last ? S0.last.t : null }));
   if (S0.prev && pts.length > 1) pts[pts.length - 2].t = S0.prev.t;
   const st = tripState(pts, stops, company, S.data.rules, roadOf(c.open.routePoly, company, stops)); st.stale = 0;
+  MAPS.lastSt = st;
   const s = stateText(st, stops);
   $('dNext').className = 'lstat ' + s.cls; $('dNext').innerHTML = `<span class="lsd"></span>${esc(s.text)}`;
   $('dStep').innerHTML = stops.length ? stepper(stops, st) : '';
@@ -1409,12 +1446,26 @@ function trRender() {
     // เส้นที่วิ่งจริงแบบตามถนน (จากเซิร์ฟเวอร์) ต่อด้วยจุดล่าสุดในเครื่องที่ยังไม่ได้ส่ง
     const ln = S0.snap && S0.snapAt <= S0.pts.length ? S0.snap.concat(S0.pts.slice(Math.max(0, S0.snapAt - 1))) : S0.pts;
     if (ln.length > 1) { L.polyline(ln, { color: '#fff', weight: 9 }).addTo(lay); L.polyline(ln, { color: st.off ? '#D97706' : '#E11D2E', weight: 5 }).addTo(lay); }
-    if (st.last) {
-      if (st.deg != null) MAPS.lastDeg = st.deg;
-      L.marker([st.last.lat, st.last.lng], { icon: carIcon('', st.off ? 'off' : 'me', MAPS.lastDeg, true), zIndexOffset: 1000 }).addTo(lay);
-      if (MAPS.follow) MAPS.drive.map.panTo([st.last.lat, st.last.lng], { animate: true });
+    if (NAV.on && NAV.r && NAV.r.pts.length > 1) { // เส้นนำทางสีฟ้าแบบ Google
+      const done = NAV.r.pts.slice(0, NAV.r.idx + 1).map(p => [p.lat, p.lng]), rest = NAV.r.pts.slice(NAV.r.idx).map(p => [p.lat, p.lng]);
+      if (NAV.me) rest[0] = [NAV.me.lat, NAV.me.lng];
+      L.polyline(rest, { color: '#0B57D0', weight: 12, opacity: .9 }).addTo(lay);
+      L.polyline(rest, { color: '#4C8DF6', weight: 7, opacity: 1 }).addTo(lay);
+      if (done.length > 1) L.polyline(done, { color: '#9AA0A6', weight: 6, opacity: .5 }).addTo(lay);
+      const T = NAV.view && NAV.view.target; if (T) L.marker([T.lat, T.lng], { icon: navFlagIcon(), zIndexOffset: 900 }).addTo(lay);
+    }
+    const me = NAV.on && NAV.me ? NAV.me : st.last;
+    if (me) {
+      if (NAV.on && NAV.deg != null) MAPS.lastDeg = NAV.deg; else if (st.deg != null) MAPS.lastDeg = st.deg;
+      L.marker([me.lat, me.lng], { icon: carIcon('', st.off && !NAV.on ? 'off' : 'me', MAPS.lastDeg, true), zIndexOffset: 1000 }).addTo(lay);
+      if (MAPS.follow) {
+        const m = MAPS.drive.map;
+        if (NAV.on && m.getZoom() < 16) m.setView([me.lat, me.lng], 17, { animate: true });
+        else m.panTo([me.lat, me.lng], { animate: true });
+      }
     }
   }
+  navPaint();
   $('dTime').textContent = clock(Date.now() - new Date(c.open.startTime).getTime());
   $('dKm').textContent = S0.km.toFixed(1);
   $('dQ').textContent = S0.queue.length ? `รอส่ง ${S0.queue.length} จุด` : 'ส่งข้อมูลล่าสุด';
@@ -1426,6 +1477,138 @@ function trRender() {
   $('dWarn').innerHTML = warn.length ? `<div class="verdict warn" style="margin-bottom:10px">${warn.map(esc).join('<br>')}</div>` : '';
   if ($('dDot')) $('dDot').className = 'pulse' + (TR.on && !S0.err ? '' : ' off');
   if ($('dStatus')) $('dStatus').textContent = TR.on ? (S0.n ? 'กำลังบันทึกเส้นทาง' : 'กำลังหาสัญญาณ GPS…') : 'หยุดบันทึกแล้ว';
+}
+
+// ---------- นำทางในแอป (แบบ Google Maps) ----------
+// ใช้หน้านี้ต่อได้เลย GPS ยังบันทึกอยู่ ไม่ต้องสลับไปแอปอื่น
+const NAV = { on: false, r: null, ti: 0, me: null, deg: null, busy: false, lastReq: 0, offN: 0, spoke: {}, view: null, msg: '', mute: store.get('fleet_mute') === '1' };
+const NAV_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/></svg>';
+function navTargets(c) {
+  const C = S.data.rules.company;
+  return [...tripStops(c.open).map((s, i) => ({ lat: +s.lat, lng: +s.lng, name: s.name || `จุดที่ ${i + 1}`, label: `จุดที่ ${i + 1}` })),
+    ...(C ? [{ lat: +C.lat, lng: +C.lng, name: hqName(), label: 'กลับบริษัท' }] : [])];
+}
+function navStart(c) {
+  const T = navTargets(c); if (!T.length) return toast('ยังไม่มีจุดหมาย');
+  const st = MAPS.lastSt; NAV.ti = st && st.next >= 0 ? st.next : T.length - 1;
+  Object.assign(NAV, { on: true, r: null, view: null, spoke: {}, offN: 0, msg: 'กำลังหาเส้นทาง…', lastReq: 0 });
+  NAV.me = NAV.me || (TR.st && TR.st.last) || null;
+  MAPS.follow = true; $('dsheet').classList.add('min'); $('dsheet').scrollTop = 0;
+  speak(`เริ่มนำทางไป ${T[NAV.ti].name}`); // ต้องพูดครั้งแรกตอนกดปุ่ม มือถือถึงยอมให้เสียงออก
+  navRoute(true); trRender();
+}
+function navStop(silent) {
+  if (!NAV.on) return;
+  NAV.on = false; NAV.r = null; NAV.view = null;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  if (!silent) { MAPS.follow = true; trRender(); }
+}
+async function navRoute(force) {
+  const c = MAPS.drive && MAPS.drive.car, me = NAV.me;
+  if (!NAV.on || !c) return;
+  if (!me) { NAV.msg = 'รอสัญญาณ GPS…'; return navPaint(); }
+  if (NAV.busy || (!force && Date.now() - NAV.lastReq < 15000)) return;
+  const T = navTargets(c)[NAV.ti]; if (!T) return;
+  NAV.busy = true; NAV.lastReq = Date.now(); const re = !!NAV.r;
+  try {
+    const r = await call('nav', { from: { lat: me.lat, lng: me.lng }, to: { lat: T.lat, lng: T.lng } });
+    if (!NAV.on) return;
+    const pts = r.poly.map(p => ({ lat: p[0], lng: p[1] })), cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + kmBetween(pts[i - 1], pts[i]));
+    NAV.r = { pts, cum, steps: r.steps, m: r.m, s: r.s, ti: NAV.ti, idx: 0, id: Date.now() };
+    NAV.offN = 0; NAV.msg = '';
+    if (re && !force) speak('คำนวณเส้นทางใหม่');
+    else if (r.steps[0] && r.steps[0].text) speak(r.steps[0].text);
+    navUpdate();
+  } catch (e) { NAV.msg = e.message; }
+  finally { NAV.busy = false; trRender(); }
+}
+function navPos(pt) {
+  const prev = NAV.me;
+  if (pt.hd != null && isFinite(pt.hd) && pt.hd >= 0) NAV.deg = pt.hd;
+  else if (prev && kmBetween(prev, pt) > 0.008) NAV.deg = bearing(prev, pt);
+  NAV.me = { lat: pt.lat, lng: pt.lng, t: pt.t };
+  if (NAV.on) { navUpdate(); if (!TR.st || TR.st.last !== pt) trRender(); }
+}
+function navUpdate() {
+  const c = MAPS.drive && MAPS.drive.car, me = NAV.me; if (!NAV.on || !c || !me) return;
+  const all = navTargets(c), tgt = all[NAV.ti]; if (!tgt) return;
+  if (kmBetween(me, tgt) < 0.07) { // ถึงจุดหมาย
+    if (!NAV.spoke['arr' + NAV.ti]) { NAV.spoke['arr' + NAV.ti] = 1; speak(`ถึง ${tgt.name} แล้ว`); toast(`ถึง ${tgt.name} แล้ว`); }
+    if (NAV.ti < all.length - 1) { NAV.ti++; NAV.r = null; NAV.view = null; setTimeout(() => navRoute(true), 1500); }
+    else { NAV.view = { arrived: true, target: tgt }; }
+    return;
+  }
+  const R = NAV.r; if (!R || R.ti !== NAV.ti) { if (!NAV.busy) navRoute(true); return; }
+  let best = Infinity, bi = R.idx;
+  for (let i = Math.max(0, R.idx - 3); i < Math.min(R.pts.length - 1, R.idx + 120); i++) {
+    const d = segDistKm(me, R.pts[i], R.pts[i + 1]); if (d < best) { best = d; bi = i; }
+  }
+  if (best > 0.07) { if (++NAV.offN >= 3) navRoute(); } else NAV.offN = 0;
+  if (best < 0.15) R.idx = bi;
+  const seg = R.cum[R.idx + 1] - R.cum[R.idx];
+  const along = R.cum[R.idx] + Math.min(kmBetween(R.pts[R.idx], me), seg || 0);
+  let si = R.steps.findIndex(x => R.cum[x.end] > along + 0.005); if (si < 0) si = R.steps.length - 1;
+  const toMan = Math.max(0, R.cum[R.steps[si].end] - along), left = Math.max(0, R.cum[R.cum.length - 1] - along);
+  const next = R.steps[si + 1];
+  NAV.view = { text: next ? next.text : `ถึง ${tgt.name}`, man: next ? next.man : 'arrive', dist: toMan, left, target: tgt,
+    min: Math.max(1, Math.round(R.s / 60 * left / Math.max(R.m / 1000, 0.01))), then: next && R.steps[si + 2] && R.steps[si + 1].m < 150 ? R.steps[si + 2] : null };
+  const k = R.id + ':' + si;
+  if (next) {
+    if (toMan <= 0.06) { if (!NAV.spoke[k + 'b']) { NAV.spoke[k + 'b'] = NAV.spoke[k + 'a'] = 1; speak(next.text); } }
+    else if (toMan <= 0.3 && R.steps[si].m > 350) { if (!NAV.spoke[k + 'a']) { NAV.spoke[k + 'a'] = 1; speak(`อีก ${navDist(toMan)} ${next.text}`); } }
+  } else if (toMan <= 0.2 && !NAV.spoke[k + 'z']) { NAV.spoke[k + 'z'] = 1; speak(`อีก ${navDist(toMan)} ถึง ${tgt.name}`); }
+}
+const navDist = km => km < 1 ? `${Math.max(10, Math.round(km * 100) * 10)} เมตร` : `${km.toFixed(km < 10 ? 1 : 0)} กม.`;
+function navPaint() {
+  const ban = $('navban'), bar = $('navbar'), go = $('navgo'); if (!ban || !bar) return;
+  ban.hidden = bar.hidden = !NAV.on; if (go) go.hidden = NAV.on; if ($('gmap')) $('gmap').hidden = NAV.on;
+  if (!NAV.on) return;
+  const v = NAV.view;
+  if (!v) ban.innerHTML = `<div class="nvic">${NAV_ICON}</div><div class="nvtx"><span>${esc(NAV.msg || 'กำลังหาเส้นทาง…')}</span></div>`;
+  else if (v.arrived) ban.innerHTML = `<div class="nvic">${manIcon('arrive')}</div><div class="nvtx"><b>ถึงแล้ว</b><span>${esc(v.target.name)}</span></div>`;
+  else ban.innerHTML = `<div class="nvic">${manIcon(v.man, v.text)}</div><div class="nvtx"><b>${navDist(v.dist)}</b><span>${esc(v.text)}</span></div>`
+    + (v.then ? `<div class="nvthen">จากนั้น ${manIcon(v.then.man, v.then.text)}</div>` : '');
+  const T = v && v.target, eta = v && !v.arrived ? new Date(Date.now() + v.min * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
+  bar.innerHTML = `<div class="nvbar"><div class="nveta">${v && !v.arrived ? `<b>${v.min} นาที</b><span>${navDist(v.left)} · ถึง ${eta} น.</span>` : `<b>นำทาง</b><span>${esc(NAV.msg || '')}</span>`}
+      <em>ไป ${esc(T ? T.label + ' ' + (T.label === 'กลับบริษัท' ? '' : T.name) : '')}</em></div>
+    <button class="nvb" id="nvmute" aria-label="${NAV.mute ? 'เปิดเสียง' : 'ปิดเสียง'}">${NAV.mute ? '🔇' : '🔊'}</button>
+    <button class="nvb" id="nvskip" aria-label="ข้ามไปจุดถัดไป">⏭</button>
+    <button class="nvb stop" id="nvstop" aria-label="หยุดนำทาง">✕</button></div>`;
+  $('nvmute').onclick = () => { NAV.mute = !NAV.mute; store.set('fleet_mute', NAV.mute ? '1' : '0'); if (NAV.mute) try { speechSynthesis.cancel(); } catch (e) {} navPaint(); };
+  $('nvskip').onclick = () => { const all = navTargets(MAPS.drive.car); if (NAV.ti >= all.length - 1) return toast('นี่คือจุดสุดท้ายแล้ว'); NAV.ti++; NAV.r = null; NAV.view = null; NAV.msg = 'กำลังหาเส้นทาง…'; speak(`ไป ${all[NAV.ti].name}`); navRoute(true); navPaint(); };
+  $('nvstop').onclick = () => navStop();
+}
+function speak(text) {
+  if (NAV.mute || !window.speechSynthesis || !text) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'th-TH'; u.rate = 1;
+    const v = speechSynthesis.getVoices().find(x => /^th/i.test(x.lang)); if (v) u.voice = v;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function manIcon(man, text) {
+  man = man || ''; text = text || '';
+  if (!man) man = /กลับรถ/.test(text) ? 'uturn' : /ขวา/.test(text) ? 'turn-right' : /ซ้าย/.test(text) ? 'turn-left' : 'straight';
+  const sv = (d, flip) => `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"${flip ? ' style="transform:scaleX(-1)"' : ''}>${d}</svg>`;
+  const left = /left/.test(man);
+  if (man === 'arrive') return `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>`;
+  if (/uturn/.test(man)) return sv('<path d="M16 21V9a4 4 0 0 0-8 0v6"/><path d="m4.5 12 3.5 3.5 3.5-3.5"/>', /right/.test(man));
+  if (/roundabout/.test(man)) return sv('<circle cx="12" cy="10" r="4"/><path d="M12 21v-7"/><path d="M15 7l3-3M15 4h3v3"/>', left);
+  if (/sharp/.test(man)) return sv('<path d="M8 21V8l9 9"/><path d="M11 17h6v-6"/>', left);
+  if (/slight|keep|fork|ramp/.test(man)) return sv('<path d="M9 21v-7l7-7"/><path d="M11 7h5v5"/>', left);
+  if (/turn/.test(man)) return sv('<path d="M8 21v-9a3 3 0 0 1 3-3h8"/><path d="m15 5 4 4-4 4"/>', left);
+  return sv('<path d="M12 21V4"/><path d="m7 9 5-5 5 5"/>');
+}
+function navFlagIcon() {
+  return L.divIcon({ className: '', iconSize: [34, 42], iconAnchor: [17, 40], html: `<div class="navflag">${manIcon('arrive')}</div>` });
+}
+function navGmaps(c) {
+  const all = navTargets(c), st = MAPS.lastSt, T = all[st && st.next >= 0 ? st.next : all.length - 1];
+  if (!T) return toast('ยังไม่มีจุดหมาย');
+  ask('ถ้าสลับไปแอป Google Maps เว็บนี้จะหยุดบันทึก GPS จนกว่าจะกลับมาเปิดหน้านี้ ผู้ดูแลจะเห็นว่าสัญญาณขาดช่วง แนะนำให้ใช้ "เริ่มนำทาง" ในแอปนี้แทน', 'เปิด Google Maps', () => {
+    window.open(`https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${T.lat.toFixed(6)},${T.lng.toFixed(6)}`, '_blank');
+  });
 }
 
 // เปิดเส้นทางเดียวกันใน Google Maps ไว้เทียบ: บริษัท → จุดแวะ → บริษัท

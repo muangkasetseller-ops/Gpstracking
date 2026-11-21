@@ -1,7 +1,7 @@
 // Service worker: ให้ติดตั้งเป็นแอปได้ และเปิดหน้าเว็บได้แม้เน็ตไม่ดี
 // หน้าเว็บโหลดจากเน็ตก่อนเสมอ (ได้เวอร์ชันล่าสุด) ถ้าออฟไลน์ค่อยใช้ตัวที่เก็บไว้
 // ไม่เก็บข้อมูลจากหลังบ้าน (Google Apps Script) และไม่เก็บภาพแผนที่
-const CACHE = 'fleet-v3';
+const CACHE = 'fleet-v4';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
