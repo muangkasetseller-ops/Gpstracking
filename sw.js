@@ -1,7 +1,7 @@
 // Service worker: ให้ติดตั้งเป็นแอปได้ และเปิดหน้าเว็บได้แม้เน็ตไม่ดี
 // หน้าเว็บโหลดจากเน็ตก่อนเสมอ (ได้เวอร์ชันล่าสุด) ถ้าออฟไลน์ค่อยใช้ตัวที่เก็บไว้
 // ไม่เก็บข้อมูลจากหลังบ้าน (Google Apps Script) และไม่เก็บภาพแผนที่
-const CACHE = 'fleet-v4';
+const CACHE = 'fleet-v6';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -15,7 +15,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
-  const cdn = /cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com/.test(url.hostname);
+  const cdn = /cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(url.hostname);
   if (!sameOrigin && !cdn) return; // หลังบ้าน, แผนที่ ฯลฯ ให้ไปตามปกติ
   if (req.mode === 'navigate' || (sameOrigin && url.pathname.endsWith('.html'))) {
     e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
