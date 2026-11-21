@@ -303,6 +303,36 @@ body.admin .atabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:6;
 .menuitem.warn{color:var(--brick)}
 .fbtn.comp.on{box-shadow:0 0 0 3px #1A73E8,0 2px 10px rgba(17,17,19,.22)}
 .cneedle{transition:transform .25s}
+.pnum{width:28px;height:28px;border-radius:8px;background:var(--ink);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.culist{padding:4px 12px}.curow{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.curow:last-child{border-bottom:0}
+.curow .lwho{flex:1;min-width:0}.curow .lwho b{font-size:16px}.curow .lwho span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.offln{color:#1D3F8A}
+.bar select.f{width:auto;max-width:42%;flex:0 1 auto}
+.fromrow{display:flex;align-items:center;gap:10px;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:12px}
+.fromrow .fic{width:36px;height:36px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fromrow .fx2{flex:1;min-width:0;display:flex;flex-direction:column}
+.fromrow small{font-size:13px;color:var(--muted)}.fromrow b{font-size:17px}.fromrow span{font-size:13px;color:var(--muted)}
+.qlbl{font-size:13px;color:var(--muted);margin:0 2px 6px}
+.qchips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.qchips::-webkit-scrollbar{display:none}
+.qchip{flex-shrink:0;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:15px;white-space:nowrap;color:var(--ink)}
+.qchip svg{color:var(--muted)}.qchip:active{background:var(--leaf)}
+.qchip.cus{border-color:var(--ink);font-weight:600}.qchip.cus svg{color:#E8A400}.qchip i{font-style:normal;background:var(--ink);color:#fff;border-radius:999px;padding:0 7px;font-size:12px}
+.ends{display:flex;flex-direction:column;gap:8px}
+.endopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;color:var(--ink)}
+.endopt b{font-size:17px}.endopt span{font-size:13px;color:var(--muted)}
+.endopt.on{border-color:var(--green);background:var(--leaf);box-shadow:inset 0 0 0 1px var(--green)}
+.plist{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto}
+.pitem{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;color:var(--ink)}
+.pitem b{font-size:16px}.pitem span{font-size:13px;color:var(--muted)}.pitem.on{border-color:var(--green);background:var(--leaf)}
+.sheet.tall{max-height:86vh}
+.offbar{background:#FFF7E6;border:1px solid #F5C66A;color:#7A4A00;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;line-height:1.5}
+.offbar.q{background:#EEF4FF;border-color:#A9C2F5;color:#1D3F8A}
+.offbar.bad{background:#FDEDEF;border-color:#F2A7AF;color:#8E0F1A}
+.offbar .linkbtn{display:inline;margin:0;padding:0 4px;font-size:14px;color:inherit}
+.pendtag{font-size:13px;color:#1D3F8A;background:#EEF4FF;border-radius:8px;padding:6px 10px;margin:6px 0 8px}
+body.night #dmap .leaflet-tile-pane{filter:invert(.92) hue-rotate(180deg) brightness(.92) contrast(.92)}
+body.night #dmap{background:#1b1d21}
 .navban{position:absolute;top:calc(68px + env(safe-area-inset-top));left:12px;right:12px;max-width:640px;z-index:710;background:#0B5D2E;color:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px -8px rgba(0,0,0,.5);flex-wrap:wrap}
 .navban[hidden],#navbar[hidden],.btn[hidden],.linkbtn[hidden]{display:none}
 .nvic{width:46px;height:46px;flex-shrink:0;color:#fff}
@@ -499,10 +529,69 @@ async function readPhoto(file, max, stamp) {
 async function call(action, p = {}) {
   if (DEMO) return demo.call(action, Object.assign({}, p, { pin: p.pin ?? store.get('fleet_pin') }));
   const body = Object.assign({}, p, { action, pin: p.pin ?? store.get('fleet_pin') });
-  const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  const ac = window.AbortController ? new AbortController() : null, to = ac && setTimeout(() => ac.abort(), 60000); // สัญญาณแย่มาก ไม่รอนานเกินไป
+  let res;
+  try { res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ac ? ac.signal : undefined }); }
+  finally { clearTimeout(to); }
   const j = await res.json();
   if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
   return j.data;
+}
+
+// ---------- ใช้งานตอนไม่มีสัญญาณ ----------
+// รับรถ/คืนรถตอนไม่มีเน็ต: เก็บไว้ในเครื่อง (outbox) แล้วส่งให้เองตามลำดับเมื่อมีสัญญาณ
+// ใช้ clientId กันบันทึกซ้ำ และส่งเวลาจริงที่กดในเครื่อง (clientTime) ไปด้วย
+const netErr = e => !navigator.onLine || !!(e && (e.name === 'TypeError' || e.name === 'AbortError' || /Failed to fetch|NetworkError|Load failed|network|timeout|aborted/i.test(e.message || '')));
+const rid = () => Array.from({ length: 10 }, () => 'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(Math.random() * 32)]).join('');
+const OB = { busy: false };
+const obLoad = () => { try { return JSON.parse(localStorage.getItem('fleet_outbox') || '[]'); } catch (e) { return []; } };
+const obSave = a => { try { localStorage.setItem('fleet_outbox', JSON.stringify(a)); return true; } catch (e) { return false; } };
+function obAdd(action, body) {
+  const a = obLoad(); a.push({ action, body, at: Date.now() + Math.random() });
+  if (!obSave(a)) throw new Error('พื้นที่ในเครื่องเต็ม บันทึกแบบไม่มีสัญญาณไม่ได้ ลองลบรูปเก่าในเครื่องหรือรอสัญญาณ');
+}
+const obPendingTrip = id => obLoad().some(x => x.action === 'checkout' && x.body.clientId === id && !x.err);
+async function obFlush() {
+  if (OB.busy || !obLoad().some(x => !x.err)) return false;
+  OB.busy = true; let sent = false;
+  try {
+    const a = obLoad();
+    for (let it = a.find(x => !x.err); it; it = a.find(x => !x.err)) {
+      try { await call(it.action, it.body); a.splice(a.indexOf(it), 1); sent = true; }
+      catch (e) {
+        if (netErr(e)) break;
+        it.err = e.message;
+        const tid = it.body.clientId || it.body.tripId;
+        a.forEach(x => { if (x !== it && !x.err && x.body.tripId === tid) x.err = 'รายการรับรถก่อนหน้าส่งไม่สำเร็จ'; });
+      }
+      obSave(a);
+    }
+  } finally { OB.busy = false; }
+  if (sent && !isAdmin() && S.screen === 'home') { try { S.data = await call('init'); cacheInit(); S.offline = false; renderHome(); } catch (e) {} }
+  return sent;
+}
+window.addEventListener('online', () => { S.offline = false; obFlush(); });
+setInterval(() => { if (navigator.onLine) obFlush(); }, 30000);
+// ข้อมูลล่าสุดเก็บไว้ในเครื่อง เปิดแอปตอนไม่มีเน็ตก็ยังเห็นรถและรับ/คืนรถได้
+function cacheInit() {
+  if (!S.data || isAdmin()) return;
+  try { localStorage.setItem('fleet_init', JSON.stringify(S.data, (k, v) => /Photo$/.test(k) && String(v).startsWith('data:') ? '' : v)); } catch (e) {}
+}
+const cachedInit = () => { try { return JSON.parse(localStorage.getItem('fleet_init') || 'null'); } catch (e) { return null; } };
+function offlineBanner() {
+  const a = obLoad(), pend = a.filter(x => !x.err && x.action !== 'track').length, bad = a.filter(x => x.err && x.action !== 'track');
+  const nm = x => x.action === 'checkout' ? 'การรับรถ' : 'การคืนรถ';
+  return (S.offline || !navigator.onLine ? '<div class="offbar"><b>ไม่มีสัญญาณอินเทอร์เน็ต</b> ใช้งานต่อได้ตามปกติ ระบบจะบันทึกไว้ในเครื่องแล้วส่งให้เองเมื่อมีสัญญาณ</div>' : '')
+    + (pend ? `<div class="offbar q">รอส่งเข้าระบบ ${pend} รายการ <button class="linkbtn" id="obNow">ส่งตอนนี้</button></div>` : '')
+    + bad.map(x => `<div class="offbar bad">ส่ง${nm(x)}ไม่สำเร็จ: ${esc(x.err)}<br><span class="small">แจ้งผู้ดูแลให้บันทึกแทน แล้วลบรายการนี้</span> <button class="linkbtn" data-obdel="${x.at}">ลบรายการนี้</button></div>`).join('');
+}
+function bindOfflineBanner(again) {
+  if ($('obNow')) $('obNow').onclick = async () => { $('obNow').textContent = 'กำลังส่ง…'; await obFlush(); (again || boot)(); };
+  document.querySelectorAll('[data-obdel]').forEach(b => b.onclick = () => ask('ลบรายการที่ส่งไม่สำเร็จนี้?', 'ลบ', () => {
+    const a = obLoad(), it = a.find(x => String(x.at) === b.dataset.obdel); if (!it) return;
+    const tid = it.body.clientId || it.body.tripId;
+    obSave(a.filter(x => x !== it && !(x.err && x.body.tripId === tid))); (again || boot)();
+  }));
 }
 
 // ---------- โหมดทดลอง (จำลองหลังบ้านในเบราว์เซอร์) ----------
@@ -517,7 +606,11 @@ const DEMO_CFG = {
   drivers: ['สมชาย', 'สมหญิง', 'สมศักดิ์'],
   pins: { '111111': 'สมชาย', '222222': 'สมหญิง', '333333': 'สมศักดิ์' },
   rules: { workStart: 7, workEnd: 19, workDays: [1, 2, 3, 4, 5], gapKm: 2, extraPct: 30, extraMinKm: 10, maxHours: 10, photoMaxAge: 15, requireReceipt: true,
-    gpsRequired: true, gpsGapMin: 10, offrouteKm: 5, company: { lat: 13.668, lng: 100.605 } },
+    gpsRequired: true, gpsGapMin: 10, offrouteKm: 5, company: { id: 'hq', lat: 13.668, lng: 100.605, name: 'สำนักงานใหญ่' } },
+  places: [{ id: 'hq', lat: 13.668, lng: 100.605, name: 'สำนักงานใหญ่' }, { id: 'wh', lat: 13.612, lng: 100.702, name: 'โกดังบางพลี' }],
+  customers: [{ name: 'ร้านเกษตรรุ่งเรือง', address: 'ตำบลบางพลีใหญ่ อำเภอบางพลี สมุทรปราการ (ตัวอย่าง)', lat: 13.598, lng: 100.722 },
+    { name: 'สหกรณ์การเกษตรลาดกระบัง', address: 'แขวงลาดกระบัง เขตลาดกระบัง กรุงเทพมหานคร (ตัวอย่าง)', lat: 13.727, lng: 100.758 },
+    { name: 'บริษัท ปุ๋ยไทย จำกัด', address: 'ตำบลบางเสาธง อำเภอบางเสาธง สมุทรปราการ (ตัวอย่าง)', lat: 13.585, lng: 100.808 }],
 };
 function demoApply(st) {
   DEMO_CFG.allCars = st.cars;
@@ -533,11 +626,14 @@ const demo = {
     if (!d) { d = seedData(); this.save(d); }
     d.track = d.track || {};
     if (d.settings) demoApply(d.settings);
+    if (d.places && d.places.length) { DEMO_CFG.places = d.places; DEMO_CFG.rules.company = d.places[0]; }
+    if (d.customers) DEMO_CFG.customers = d.customers;
     return d;
   },
   save(d) { try { store.set('fleet_demo', JSON.stringify(d)); } catch (e) { toast('พื้นที่เก็บข้อมูลทดลองเต็ม'); } },
   async call(action, p) {
     await new Promise(r => setTimeout(r, 200));
+    if (window.__fakeOffline) throw new TypeError('Failed to fetch'); // ใช้ทดสอบโหมดไม่มีสัญญาณ
     const d = this.load(), R = DEMO_CFG.rules, now = new Date();
     const outside = x => { const dow = x.getDay() || 7, h = x.getHours(); return !R.workDays.includes(dow) || h < R.workStart || h >= R.workEnd; };
     const lastOdo = car => { let m = null; d.trips.filter(t => t.car === car).forEach(t => { const v = t.endOdo !== '' ? +t.endOdo : +t.startOdo; if (m === null || v > m) m = v; }); return m; };
@@ -549,10 +645,14 @@ const demo = {
       if (!DEMO_CFG.pins[p.pin]) throw new Error('PIN ไม่ถูกต้อง');
       return { name: DEMO_CFG.pins[p.pin], role: 'driver' };
     }
-    if (action === 'setCompany') {
+    if (action === 'setCompany' || action === 'placesSave' || action === 'customersSave') {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
-      DEMO_CFG.rules.company = { lat: +p.lat, lng: +p.lng, name: p.name || 'บริษัท' };
-      return DEMO_CFG.rules.company;
+      if (action === 'customersSave') { d.customers = (p.customers || []).filter(c => c.name && c.lat != null); this.save(d); DEMO_CFG.customers = d.customers; return d.customers; }
+      let list = action === 'placesSave' ? (p.places || []) : [{ ...(DEMO_CFG.places[0] || { id: 'hq' }), lat: +p.lat, lng: +p.lng, name: p.name || 'บริษัท' }, ...DEMO_CFG.places.slice(1)];
+      if (!list.length) throw new Error('ต้องมีที่ตั้งอย่างน้อย 1 จุด');
+      list = list.map((x, i) => { if (!String(x.name || '').trim()) throw new Error('ตั้งชื่อที่ตั้งให้ครบทุกจุด'); return { id: x.id || 'pl' + Date.now().toString(36) + i, name: x.name.trim(), lat: +x.lat, lng: +x.lng }; });
+      d.places = list; this.save(d); DEMO_CFG.places = list; DEMO_CFG.rules.company = list[0];
+      return action === 'placesSave' ? list : list[0];
     }
     if (action === 'review') {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
@@ -572,19 +672,25 @@ const demo = {
       }
       return { cars: DEMO_CFG.allCars || DEMO_CFG.cars.map(c => ({ ...c, active: true })),
         drivers: DEMO_CFG.driverList || Object.entries(DEMO_CFG.pins).map(([pin, name]) => ({ name, pin, active: true })),
-        adminDefault: true, company: R.company, fuelTypes: Object.entries(DEMO_CFG.fuel.labels).map(([id, label]) => ({ id, label })) };
+        adminDefault: true, company: R.company, places: DEMO_CFG.places, customers: DEMO_CFG.customers, fuelTypes: Object.entries(DEMO_CFG.fuel.labels).map(([id, label]) => ({ id, label })) };
     }
     if (action === 'myTrips') return d.trips.filter(t => t.driver === who).slice().reverse();
     if (action === 'init') return {
       carsAll: DEMO_CFG.allCars || DEMO_CFG.cars, adminDefault: true,
-      drivers: DEMO_CFG.drivers, rules: R, fuel: DEMO_CFG.fuel,
-      cars: DEMO_CFG.cars.map(c => Object.assign({}, c, { open: d.trips.find(t => t.car === c.id && t.status === 'open') || null, lastOdo: lastOdo(c.id) })),
+      drivers: DEMO_CFG.drivers, rules: R, fuel: DEMO_CFG.fuel, places: DEMO_CFG.places, customers: DEMO_CFG.customers,
+      recent: demoRecent(d, who),
+      cars: DEMO_CFG.cars.map(c => { const lc = d.trips.filter(t => t.car === c.id && t.status === 'closed' && t.endLat !== '' && t.endLat != null).pop();
+        return Object.assign({}, c, { open: d.trips.find(t => t.car === c.id && t.status === 'open') || null, lastOdo: lastOdo(c.id), lastLoc: lc ? { lat: +lc.endLat, lng: +lc.endLng, at: lc.endTime } : null }); }),
     };
+    if (action === 'odoRead') { // โหมดทดลอง: แกล้งอ่านเลขไมล์ ของจริงใช้ OCR ของ Google Drive
+      await new Promise(r => setTimeout(r, 800));
+      const last = lastOdo(p.car); return { odo: (last ?? 45000) + 1, sure: true, last, demo: true };
+    }
     if (action === 'adminCheck' || action === 'trips') {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
       return action === 'trips' ? d.trips.slice().reverse() : true;
     }
-    if (action === 'route') return demoRoute(p.stops);
+    if (action === 'route') return demoRoute(p.stops, p.from, p.end);
     if (action === 'nav') return demoNav(p.from, p.to);
     if (action === 'place') return demoPlace(p.q);
     if (action === 'receipt') { // โหมดทดลอง: แกล้งอ่านใบเสร็จ ของจริงใช้ OCR ของ Google Drive
@@ -601,46 +707,63 @@ const demo = {
       const trips = d.trips.filter(t => t.status === 'open').map(t => {
         const car = DEMO_CFG.cars.find(c => c.id === t.car); let stops = []; try { stops = JSON.parse(t.stopsJson || '[]'); } catch (e) {}
         return { id: t.id, car: t.car, carName: car.name, plate: car.plate, driver: t.driver, purpose: t.purpose, startTime: t.startTime, routePoly: t.routePoly || '',
+          fromName: t.fromName, fromLat: t.fromLat, fromLng: t.fromLng, endMode: t.endMode, toName: t.toName, toLat: t.toLat, toLng: t.toLng,
           startOdo: t.startOdo, expectedKm: t.expectedKm, stops, points: (d.track[t.id] || []).map(q => [q.t, q.lat, q.lng]) };
       });
       const v = demoVirtual(d); if (v) trips.push(v);
-      return { trips, company: R.company, now: Date.now() };
+      return { trips, company: R.company, places: DEMO_CFG.places, now: Date.now() };
     }
     if (action === 'trackGet') {
       if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง');
       const t = d.trips.find(x => x.id === p.tripId);
       let stops = []; try { stops = JSON.parse(t?.stopsJson || '[]'); } catch (e) {}
-      return { points: d.track[p.tripId] || [], stops, company: R.company, routePoly: t?.routePoly || '' };
+      const E = demoEnds(t);
+      return { points: d.track[p.tripId] || [], stops, company: E.from, from: E.from, to: E.to, endMode: E.mode, routePoly: t?.routePoly || '' };
     }
     if (action === 'checkout') {
       const odo = +p.odo;
       if (!(odo > 0)) throw new Error('กรุณากรอกเลขไมล์');
       if (!p.photo) throw new Error('กรุณาถ่ายรูปหน้าปัดเลขไมล์');
       if (!String(p.purpose || '').trim()) throw new Error('กรุณาระบุวัตถุประสงค์');
+      if (p.clientId) { const dup = d.trips.find(t => t.id === p.clientId); if (dup) return { id: dup.id, flags: flagsOf(dup), expectedKm: dup.expectedKm, dup: true }; }
       if (d.trips.some(t => t.car === p.car && t.status === 'open')) throw new Error('รถคันนี้ยังไม่ได้คืน');
       const flags = [], last = lastOdo(p.car);
+      const when = p.clientTime && p.clientTime > Date.now() - 72 * 36e5 && p.clientTime <= Date.now() + 3e5 ? new Date(p.clientTime) : now;
       if (last !== null) {
         if (odo < last) flags.push(`เลขไมล์ต่ำกว่าตอนคืนรถครั้งก่อน (${n(last)})`);
         else if (odo - last > R.gapKm) flags.push(`มี ${n(odo - last)} กม. ที่ไม่ได้บันทึก (คืนรถครั้งก่อนที่ ${n(last)})`);
       }
-      if (outside(now)) flags.push('นำรถออกนอกเวลางาน');
+      if (outside(when)) flags.push('นำรถออกนอกเวลางาน');
       ageFlag(p.photoAgeMin, 'รับรถ', flags);
-      let expKm = '', rpoly = ''; try { const rr = demoRoute(p.stops || p.destination); expKm = rr.totalKm; rpoly = rr.poly; } catch (e) {}
-      const t = { id: Math.random().toString(36).slice(2, 10), status: 'open', car: p.car, driver: who === 'ผู้ดูแล' ? p.driver : who, purpose: p.purpose.trim(),
-        destination: (p.destination || '').trim(), startTime: now.toISOString(), startOdo: odo, startPhoto: p.photo,
+      const from = p.from && p.from.lat != null ? { lat: +p.from.lat, lng: +p.from.lng, name: p.from.name || '' } : R.company;
+      const endMode = p.end && ['back', 'place', 'free'].includes(p.end.mode) ? p.end.mode : 'back';
+      const to = endMode === 'free' ? null : endMode === 'place' && p.end.place ? { lat: +p.end.place.lat, lng: +p.end.place.lng, name: p.end.place.name || '' } : from;
+      if (p.from && p.from.base && p.lat != null && kmBetween({ lat: +p.lat, lng: +p.lng }, from) > 1) flags.push(`รับรถห่างจาก${from.name || 'จุดออกรถ'} ${kmBetween({ lat: +p.lat, lng: +p.lng }, from).toFixed(1)} กม.`);
+      let expKm = '', rpoly = ''; try { const rr = demoRoute(p.stops || p.destination, from, { mode: endMode, place: to }); expKm = rr.totalKm; rpoly = rr.poly; } catch (e) {}
+      const t = { id: p.clientId || Math.random().toString(36).slice(2, 10), status: 'open',
+        fromName: from ? from.name : '', fromLat: from ? from.lat : '', fromLng: from ? from.lng : '', endMode, toName: to ? to.name : '', toLat: to ? to.lat : '', toLng: to ? to.lng : '',
+        offline: p.clientTime ? 'รับรถตอนไม่มีสัญญาณ ส่งเข้าระบบ ' + now.toLocaleString('th-TH', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '', car: p.car, driver: who === 'ผู้ดูแล' ? p.driver : who, purpose: p.purpose.trim(),
+        destination: (p.destination || '').trim(), startTime: when.toISOString(), startOdo: odo, startPhoto: p.photo,
         startLat: p.lat ?? '', startLng: p.lng ?? '', expectedKm: expKm, endTime: '', endOdo: '', endPhoto: '', endLat: '', endLng: '',
         distance: '', fuelLiters: '', fuelBaht: '', note: '', flags: flags.join(' | '), stopsJson: JSON.stringify(p.stops || []), routePoly: rpoly };
       d.trips.push(t); this.save(d);
       return { id: t.id, flags, expectedKm: expKm };
     }
     if (action === 'checkin') {
-      const t = d.trips.find(x => x.id === p.tripId && x.status === 'open');
+      const t0 = d.trips.find(x => x.id === p.tripId);
+      if (t0 && t0.status === 'closed' && +t0.endOdo === +p.odo) return { id: t0.id, distance: t0.distance, flags: flagsOf(t0), fuelCostEst: t0.fuelCostEst, dup: true };
+      const t = t0 && t0.status === 'open' ? t0 : null;
       if (!t) throw new Error('ไม่พบรายการที่ยังไม่คืน');
       const odo = +p.odo;
       if (!(odo > 0)) throw new Error('กรุณากรอกเลขไมล์');
       if (odo < +t.startOdo) throw new Error(`เลขไมล์ต้องไม่น้อยกว่าตอนรับรถ (${n(t.startOdo)})`);
       if (!p.photo) throw new Error('กรุณาถ่ายรูปหน้าปัดเลขไมล์');
-      const dist = odo - +t.startOdo, flags = flagsOf(t), exp = +t.expectedKm, start = new Date(t.startTime);
+      const start = new Date(t.startTime);
+      const now = p.clientTime && p.clientTime >= start.getTime() && p.clientTime <= Date.now() + 3e5 ? new Date(p.clientTime) : new Date();
+      const dist = odo - +t.startOdo, flags = flagsOf(t), exp = +t.expectedKm;
+      const E = demoEnds(t);
+      if (p.lat == null) flags.push('ไม่ได้รับพิกัดตอนคืนรถ');
+      else if (E.to && kmBetween({ lat: +p.lat, lng: +p.lng }, E.to) > 1) flags.push(`คืนรถห่างจาก${E.to.name || 'จุดคืนรถ'} ${kmBetween({ lat: +p.lat, lng: +p.lng }, E.to).toFixed(1)} กม.`);
       if (exp > 0 && dist > exp * (1 + R.extraPct / 100) && dist - exp >= R.extraMinKm) flags.push(`วิ่งจริง ${n(dist)} กม. แต่ Google Maps คำนวณไว้ ~${exp} กม. (เกิน ${n(dist - exp)} กม.) · เลขไมล์ควรจบที่ ~${n(+t.startOdo + exp)}`);
       if (start.toDateString() !== now.toDateString()) flags.push('ไม่คืนรถภายในวันเดียวกัน');
       else if ((now - start) / 36e5 > R.maxHours) flags.push(`ใช้รถนาน ${((now - start) / 36e5).toFixed(1)} ชม.`);
@@ -657,12 +780,13 @@ const demo = {
       }
       const fuelCostEst = price && car.kmPerLiter ? Math.round(dist / car.kmPerLiter * price) : '';
       let stops = []; try { stops = JSON.parse(t.stopsJson || '[]'); } catch (e) {}
-      const g = gpsStats(d.track[t.id] || [], start.getTime(), now.getTime(), stops, R.company);
+      const g = gpsStats(d.track[t.id] || [], start.getTime(), now.getTime(), stops, [...(E.from ? [E.from] : []), ...stops.filter(x => x.lat != null && x.lat !== '').map(x => ({ lat: +x.lat, lng: +x.lng })), ...(E.to ? [E.to] : [])]);
       flags.push(...gpsFlags(g, dist, R));
       Object.assign(t, { gpsKm: g.points ? g.km : '', gpsPoints: g.points, gpsMaxGapMin: g.points ? g.maxGapMin : '', gpsOffrouteKm: g.offrouteKm ?? '' });
       Object.assign(t, { fuelType: L ? fuelType : '', fuelPrice: L ? price : '', fuelCostEst, returnedBy: who });
       Object.assign(t, { status: 'closed', endTime: now.toISOString(), endOdo: odo, endPhoto: p.photo, endLat: p.lat ?? '', endLng: p.lng ?? '',
-        distance: dist, fuelLiters: p.fuelLiters ?? '', fuelBaht: p.fuelBaht ?? '', note: (p.note || '').trim(), flags: flags.join(' | ') });
+        distance: dist, fuelLiters: p.fuelLiters ?? '', fuelBaht: p.fuelBaht ?? '', note: (p.note || '').trim(), flags: flags.join(' | '),
+        offline: p.clientTime ? [t.offline, 'คืนรถตอนไม่มีสัญญาณ ส่งเข้าระบบ ' + new Date().toLocaleString('th-TH', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })].filter(Boolean).join(' | ') : t.offline });
       this.save(d);
       return { id: t.id, distance: dist, flags, fuelCostEst };
     }
@@ -689,7 +813,7 @@ function segDistKm(p, a, b) {
   const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy, u = L ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L)) : 0;
   return Math.hypot(ax + u * dx, ay + u * dy);
 }
-function gpsStats(pts, startMs, endMs, stops, company) {
+function gpsStats(pts, startMs, endMs, stops, path) {
   pts = pts.slice().sort((a, b) => a.t - b.t);
   const out = { points: pts.length, km: 0, maxGapMin: 0, gapAt: '', offrouteKm: null, offrouteAt: '' };
   if (!pts.length) return out;
@@ -705,8 +829,7 @@ function gpsStats(pts, startMs, endMs, stops, company) {
   }
   out.km = Math.round(out.km * 10) / 10;
   const st = (stops || []).filter(x => x.lat !== '' && x.lat != null).map(x => ({ lat: +x.lat, lng: +x.lng }));
-  if (company && st.length) {
-    const path = [company, ...st, company];
+  if (path && path.length > 1 && st.length) {
     let worst = 0, at = 0;
     pts.forEach(p => { let b = Infinity; for (let i = 1; i < path.length; i++) b = Math.min(b, segDistKm(p, path[i - 1], path[i])); if (b > worst) { worst = b; at = p.t; } });
     out.offrouteKm = Math.round(worst * 10) / 10; out.offrouteAt = at ? hm(at) + ' น.' : '';
@@ -731,17 +854,30 @@ function demoPlace(q) {
   const areas = ['แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร', 'ตำบลบางแก้ว อำเภอบางพลี สมุทรปราการ', 'แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร'];
   return areas.map((a, i) => ({ name: i ? `${q} สาขา ${i + 1}` : q, address: `${a} (ตัวอย่าง)`, lat: 13.668 + ((dh(q) % 40) - 20) / 500 + i * 0.03, lng: 100.605 + ((dh(q + 'x') % 40) - 20) / 500 - i * 0.02 }));
 }
-function demoRoute(stops) {
+function demoEnds(t) {
+  const has = v => v !== '' && v != null, C = DEMO_CFG.places[0] || DEMO_CFG.rules.company;
+  const from = t && has(t.fromLat) ? { lat: +t.fromLat, lng: +t.fromLng, name: t.fromName || '' } : C;
+  const mode = (t && t.endMode) || 'back';
+  return { from, mode, to: mode === 'free' ? null : mode === 'place' && has(t.toLat) ? { lat: +t.toLat, lng: +t.toLng, name: t.toName || '' } : from };
+}
+function demoRecent(d, who) {
+  const seen = {}, out = [];
+  d.trips.filter(t => t.driver === who).slice().reverse().forEach(t => { try { JSON.parse(t.stopsJson || '[]').forEach(x => { if (x.lat == null || x.lat === '' || seen[x.name]) return; seen[x.name] = 1; out.push(x); }); } catch (e) {} });
+  return out.slice(0, 12);
+}
+function demoRoute(stops, from, end) {
   const objs = (Array.isArray(stops) ? stops : String(stops || '').split('\n')).map(x => typeof x === 'object' ? x : { name: String(x).trim() }).filter(x => x.name);
   stops = objs.map(x => x.name);
   if (!stops.length) throw new Error('กรุณาใส่สถานที่อย่างน้อย 1 จุด');
   const h = str => { let v = 0; for (const ch of str) v = (v * 31 + ch.codePointAt(0)) % 9973; return v; };
+  const C = from && from.lat != null ? { lat: +from.lat, lng: +from.lng, name: from.name || '' } : DEMO_CFG.rules.company;
+  const mode = end && end.mode || 'back', to = mode === 'free' ? null : mode === 'place' && end.place ? { lat: +end.place.lat, lng: +end.place.lng, name: end.place.name } : C;
   const legs = stops.map((x, i) => ({ to: x, address: objs[i].address || '', km: 4 + h(x + i) % 23 + (h(x) % 10) / 10, min: 0 }));
-  legs.push({ to: 'กลับบริษัท', address: '', km: 6 + h(stops.join()) % 20, min: 0 });
+  if (to) legs.push({ to: mode === 'back' ? 'กลับ' + (C.name || 'จุดออกรถ') : to.name, address: '', km: 6 + h(stops.join() + mode) % 20, min: 0, end: true });
   legs.forEach(l => { l.km = Math.round(l.km * 10) / 10; l.min = Math.round(l.km * 2.2); });
-  const C = DEMO_CFG.rules.company, pts = objs.filter(o => o.lat != null && o.lat !== '').map(o => ({ lat: +o.lat, lng: +o.lng }));
-  const poly = C && pts.length ? demoRoad([C, ...pts, C]) : '';
-  return { legs, totalKm: Math.round(legs.reduce((a, l) => a + l.km, 0)), totalMin: legs.reduce((a, l) => a + l.min, 0), poly, demo: true };
+  const pts = objs.filter(o => o.lat != null && o.lat !== '').map(o => ({ lat: +o.lat, lng: +o.lng }));
+  const poly = C && pts.length ? demoRoad([C, ...pts, ...(to ? [to] : [])]) : '';
+  return { legs, mode, fromName: C.name || '', totalKm: Math.round(legs.reduce((a, l) => a + l.km, 0)), totalMin: legs.reduce((a, l) => a + l.min, 0), poly, demo: true };
 }
 // โหมดทดลอง: รถจำลองอีกคันที่วิ่งอยู่ (เร่งเวลา 4 เท่า) ให้เห็นหน้าติดตามสด
 const DEMO_V = { t0: 0 };
@@ -775,7 +911,7 @@ function seedData() {
   track.demo3 = genTrack([C, shop, { lat: 13.79, lng: 100.73 }, C], new Date(t3.startTime).getTime(), 0.8);
   t3.endTime = new Date(track.demo3[track.demo3.length - 1].t + 4 * 60000).toISOString();
   t3.flags = 'วิ่งจริง 103 กม. แต่ Google Maps คำนวณไว้ ~30 กม. (เกิน 73 กม.) · เลขไมล์ควรจบที่ ~45,218';
-  const g = gpsStats(track.demo3, new Date(t3.startTime).getTime(), new Date(t3.endTime).getTime(), [shop], C);
+  const g = gpsStats(track.demo3, new Date(t3.startTime).getTime(), new Date(t3.endTime).getTime(), [shop], [C, shop, C]);
   Object.assign(t3, { gpsKm: g.km, gpsPoints: g.points, gpsMaxGapMin: g.maxGapMin, gpsOffrouteKm: g.offrouteKm,
     flags: [...flagsOf(t3), ...gpsFlags(g, t3.distance, DEMO_CFG.rules)].join(' | ') });
   Object.assign(trips.find(t => t.id === 'demo4'), { reviewStatus: 'done', reviewNote: 'สอบถามแล้ว ลืมกดคืนรถรอบก่อน ตักเตือนแล้ว', reviewAt: new Date(Date.now() - 864e5).toISOString() });
@@ -820,11 +956,14 @@ const ICON = {
   gear: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   car: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8"/><path d="M7 14h.01M17 14h.01"/><rect x="3" y="10" width="18" height="8" rx="2"/><path d="M5 18v2M19 18v2"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg>',
+  star: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>',
 };
 
 function header(title, back, right = '') {
-  cleanupMaps();
+  cleanupMaps(); document.body.classList.remove('night');
   document.body.classList.remove('admin');
   $('hdr').innerHTML = `${back ? `<button class="back" id="hback" aria-label="กลับ">${ICON.back}</button>` : `<img class="mark appmark" src="icons/icon-192.png" alt="" width="36" height="36">`}
     <div class="brand"><h1>${title}</h1></div>${right}`;
@@ -873,12 +1012,17 @@ async function boot() {
   if (!store.get('fleet_pin') || !me()) return renderLogin();
   if (isAdmin()) return adminGo(S.tab && S.tab !== 'live' ? S.tab : 'overview');
   header('Mks Gps');
+  try { await obFlush(); } catch (e) {}
   try {
-    S.data = await call('init');
+    S.data = await call('init'); S.offline = false; cacheInit();
   } catch (e) {
     if (/PIN/.test(e.message)) { logout(); return renderLogin('PIN นี้ใช้ไม่ได้แล้ว กรุณาเข้าใช้งานใหม่'); }
-    $app.innerHTML = `<div class="empty">โหลดข้อมูลไม่สำเร็จ: ${esc(e.message)}<br><br><button class="btn sm" onclick="boot()">ลองใหม่</button></div>`;
-    return;
+    const cached = netErr(e) && cachedInit();
+    if (cached) { S.data = cached; S.offline = true; }
+    else {
+      $app.innerHTML = `<div class="empty">โหลดข้อมูลไม่สำเร็จ: ${esc(e.message)}<br><br><button class="btn sm" onclick="boot()">ลองใหม่</button></div>`;
+      return;
+    }
   }
   const q = new URLSearchParams(location.search).get('car');
   if (q && S.data.cars.some(c => c.id === q)) {
@@ -932,12 +1076,13 @@ function renderLogin(err) {
 // ---------- หน้าแรก ----------
 function renderHome() {
   header('Mks Gps', null, `<button class="hlink" id="who" aria-label="เมนู">${esc(me())} ▾</button>`);
+  S.screen = 'home';
   $('who').onclick = driverMenu;
   const cars = S.data.cars.slice().sort((a, b) => (b.open?.driver === me()) - (a.open?.driver === me()));
   const using = cars.find(c => c.open?.driver === me());
-  $app.innerHTML = `${DEMO ? `<div class="demo">โหมดทดลอง ข้อมูลเก็บในเครื่องนี้เท่านั้น อยากลองฝั่งผู้ดูแล ให้ออกจากระบบแล้วกรอก PIN 9999 <a href="#" id="reset">ล้างข้อมูลทดลอง</a></div>` : ''}
+  $app.innerHTML = `${offlineBanner()}${DEMO ? `<div class="demo">โหมดทดลอง ข้อมูลเก็บในเครื่องนี้เท่านั้น อยากลองฝั่งผู้ดูแล ให้ออกจากระบบแล้วกรอก PIN 9999 <a href="#" id="reset">ล้างข้อมูลทดลอง</a></div>` : ''}
     <h2 class="title">สวัสดี ${esc(me())}</h2>
-    <p class="lead">${using ? `คุณกำลังใช้ ${esc(using.name)} อยู่ กลับถึงบริษัทแล้วกดคืนรถด้วยนะครับ` : 'วันนี้จะใช้รถคันไหน'}</p>
+    <p class="lead">${using ? `คุณกำลังใช้ ${esc(using.name)} อยู่ จบงานแล้วกดคืนรถด้วยนะครับ` : 'วันนี้จะใช้รถคันไหน'}</p>
     <div class="cars">${cars.map(c => {
       const o = c.open, mine = o && o.driver === me();
       const st = !o ? '<span class="status free">ว่าง</span>' : mine ? '<span class="status mine">คุณใช้อยู่</span>' : '<span class="status busy">ไม่ว่าง</span>';
@@ -946,8 +1091,9 @@ function renderHome() {
         <div class="car-top">${plate(c.plate)}${st}</div>
         <h2>${esc(c.name)}</h2>
         ${o && !mine ? `<p class="who">${esc(o.driver)} ออกไปตั้งแต่ ${ftime(o.startTime)}</p>` : ''}
-        ${mine ? `<p class="who">ออกไป${esc(o.purpose)} ตั้งแต่ ${ftime(o.startTime)}</p>` : ''}
-        <div class="row"><span class="small">${o ? (exp ? 'ควรกลับมาที่' : 'ออกไปที่') : 'เลขไมล์ล่าสุด'}</span>${odo(o ? (exp || o.startOdo) : c.lastOdo, 'sm' + (exp ? ' hl' : ''))}</div>
+        ${mine ? `<p class="who">ออกไป${esc(o.purpose)} ตั้งแต่ ${ftime(o.startTime)}<br><span class="small">${esc(endText(tripEnds(o)))}</span></p>` : ''}
+        ${o && o.pending ? '<p class="pendtag">ยังไม่มีสัญญาณ บันทึกไว้ในเครื่อง รอส่งเข้าระบบ</p>' : ''}
+        <div class="row"><span class="small">${o ? (exp ? 'จบงานไมล์ควรอยู่ที่' : 'ออกไปที่') : 'เลขไมล์ล่าสุด'}</span>${odo(o ? (exp || o.startOdo) : c.lastOdo, 'sm' + (exp ? ' hl' : ''))}</div>
         ${mine ? `${trActive(o.id) ? '<div class="gpsrow"><span class="pulse"></span>กำลังบันทึกเส้นทาง GPS</div>' : ''}
           <button class="btn soft" data-drive="${esc(c.id)}" style="margin-bottom:10px">${trActive(o.id) ? 'กลับไปหน้ากำลังขับ' : trHas(o.id) ? 'บันทึกเส้นทางต่อ' : 'เริ่มบันทึกเส้นทาง GPS'}</button>` : ''}
         <button class="btn ${o && !mine ? 'line' : ''}" data-car="${esc(c.id)}">${!o ? 'รับรถ' : mine ? 'คืนรถ' : 'คืนรถแทน'}</button>
@@ -956,10 +1102,12 @@ function renderHome() {
   $app.querySelectorAll('[data-car]').forEach(b => b.onclick = () => openCar(b.dataset.car));
   $app.querySelectorAll('[data-drive]').forEach(b => b.onclick = () => openDrive(b.dataset.drive));
   if ($('reset')) $('reset').onclick = e => { e.preventDefault(); ask('ล้างข้อมูลทดลองทั้งหมด?', 'ล้างข้อมูล', () => { store.del('fleet_demo'); boot(); }); };
+  bindOfflineBanner();
   window.scrollTo(0, 0);
 }
 
 function openCar(id) {
+  S.screen = 'car';
   const c = S.data.cars.find(x => x.id === id);
   if (c.open && c.open.driver !== me()) return ask(`${c.open.driver} กำลังใช้รถคันนี้อยู่ จะคืนรถแทนใช่ไหม`, 'คืนรถแทน', () => renderCheckin(c));
   c.open ? renderCheckin(c) : renderCheckout(c);
@@ -981,8 +1129,29 @@ function bindPhoto(car, P, stepId) {
       $('prevImg').src = P.photo; $('prevImg').style.display = 'block';
       $('ph0').style.display = 'none'; $('shot').classList.add('has');
       $('retake').style.display = 'block'; $(stepId).classList.add('done');
-    } catch (e) { toast('เปิดรูปไม่ได้ ลองถ่ายใหม่อีกครั้ง'); }
+    } catch (e) { return toast('เปิดรูปไม่ได้ ลองถ่ายใหม่อีกครั้ง'); }
+    odoFromPhoto(f, car, P);
   };
+}
+// อ่านเลขไมล์จากรูปหน้าปัด แล้วกรอกให้ (คนขับแค่ตรวจว่าตรง)
+async function odoFromPhoto(f, car, P) {
+  const el = $('odoOcr'), inp = $('odo'); if (!el || !inp) return;
+  if (!inp.dataset.ocrBound) { inp.dataset.ocrBound = '1'; inp.addEventListener('input', e => { if (e.isTrusted) P.odoAuto = false; }); }
+  el.className = 'note'; el.innerHTML = '<span class="spin"></span>กำลังอ่านเลขไมล์จากรูป…';
+  try {
+    const img = await readPhoto(f, 1280, '');
+    const r = await call('odoRead', { photo: img, car: car.id });
+    if (!$('odoOcr')) return;
+    if (!r || !r.odo) { el.className = 'note'; el.textContent = 'อ่านเลขไมล์จากรูปไม่ได้ พิมพ์เองได้เลย'; return; }
+    const set = () => { inp.value = String(r.odo); inp.dispatchEvent(new Event('input')); };
+    if (!inp.value || P.odoAuto) {
+      P.odoAuto = true; set();
+      el.className = 'note ok'; el.textContent = `อ่านจากรูปได้ ${n(r.odo)} กม. ตรวจให้ตรงกับหน้าปัดอีกครั้ง` + (r.demo ? ' [ตัวเลขสมมติในโหมดทดลอง]' : '');
+    } else if (+inp.value !== +r.odo) {
+      el.className = 'note'; el.innerHTML = `อ่านจากรูปได้ ${n(r.odo)} กม. <button class="linkbtn" id="useOcr" type="button">ใช้ตัวเลขนี้</button>`;
+      $('useOcr').onclick = () => { set(); el.className = 'note ok'; el.textContent = 'ใช้ตัวเลขที่อ่านจากรูปแล้ว'; };
+    } else { el.className = 'note ok'; el.textContent = 'ตรงกับตัวเลขที่อ่านจากรูป'; }
+  } catch (e) { if ($('odoOcr')) { el.className = 'note'; el.textContent = netErr(e) ? 'ไม่มีสัญญาณ อ่านเลขไมล์จากรูปไม่ได้ พิมพ์เองได้เลย' : 'อ่านเลขไมล์จากรูปไม่ได้ พิมพ์เองได้เลย'; } }
 }
 const carCtx = c => `<div class="ctx">${plate(c.plate)}<div class="t">${esc(c.name)}</div></div>`;
 
@@ -1025,6 +1194,7 @@ function trAdd(pt) {
 }
 async function trFlush() {
   const S0 = TR.st; if (!S0 || !S0.queue.length) return true;
+  if (obPendingTrip(S0.tripId)) return false; // รอส่งการรับรถ (ตอนไม่มีสัญญาณ) เข้าระบบก่อน
   const batch = S0.queue.slice(0, 500);
   try {
     const r = await call('track', { tripId: S0.tripId, points: batch });
@@ -1051,9 +1221,7 @@ function trClear() { TR.st = null; store.del('fleet_track'); }
 
 // โหมดทดลอง: จำลองรถวิ่งตามเส้นทาง 1 วินาที = 1 จุด
 function trSimStart(trip) {
-  const C = S.data.rules.company;
-  let stops = []; try { stops = JSON.parse(trip.stopsJson || '[]').filter(x => x.lat != null && x.lat !== ''); } catch (e) {}
-  const path = [C, ...stops.map(x => ({ lat: +x.lat, lng: +x.lng })), C];
+  const path = planPath(trip, tripStops(trip)), C = path[0];
   let leg = 1, f = 0, pos = TR.st.last ? { lat: TR.st.last.lat, lng: TR.st.last.lng } : { ...C };
   TR.sim = setInterval(() => {
     if (leg >= path.length) return;
@@ -1068,8 +1236,9 @@ function trSimStart(trip) {
 }
 
 // วาดเส้นทางแบบไม่ต้องใช้แผนที่ (ใช้ในหน้ากำลังขับ)
-function traceSvg(pts, stops, company, w = 340, h = 230) {
-  const plan = company ? [company, ...stops, company] : stops;
+function traceSvg(pts, stops, E, w = 340, h = 230) {
+  E = E || {}; const company = E.from || null;
+  const plan = [...(company ? [company] : []), ...stops, ...(E.to ? [E.to] : [])];
   const all = [...pts.map(p => ({ lat: p[0], lng: p[1] })), ...plan];
   if (!all.length) return `<svg viewBox="0 0 ${w} ${h}"><text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#6B6B73" font-size="14">รอสัญญาณ GPS…</text></svg>`;
   let a = Math.min(...all.map(p => p.lat)), b = Math.max(...all.map(p => p.lat)), c = Math.min(...all.map(p => p.lng)), d = Math.max(...all.map(p => p.lng));
@@ -1083,10 +1252,23 @@ function traceSvg(pts, stops, company, w = 340, h = 230) {
     ${plan.length > 1 ? `<polyline points="${line(plan)}" fill="none" stroke="#C9C9D0" stroke-width="2" stroke-dasharray="5 5"/>` : ''}
     ${real.length > 1 ? `<polyline points="${line(real)}" fill="none" stroke="#E11D2E" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
     ${company ? `<rect x="${X(company) - 7}" y="${Y(company) - 7}" width="14" height="14" rx="3" fill="#111113"/>` : ''}
+    ${E.to && E.to !== company ? `<rect x="${X(E.to) - 7}" y="${Y(E.to) - 7}" width="14" height="14" rx="3" fill="#111113"/>` : ''}
     ${stops.map((p, i) => `<circle cx="${X(p)}" cy="${Y(p)}" r="10" fill="#FFFFFF" stroke="#111113" stroke-width="2"/><text x="${X(p)}" y="${+Y(p) + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="#111113">${i + 1}</text>`).join('')}
     ${last ? `<circle cx="${X(last)}" cy="${Y(last)}" r="7" fill="#E11D2E" stroke="#fff" stroke-width="3"/>` : ''}
   </svg>`;
 }
+// ---------- จุดออกรถ / จุดจบของงาน ----------
+// รายการเก่าที่ไม่มีข้อมูลนี้ ถือว่าออกจากที่ตั้งหลักแล้วกลับที่เดิม
+const PLACES = () => (S.data && S.data.places && S.data.places.length) ? S.data.places : (S.data?.rules?.company ? [S.data.rules.company] : []);
+function tripEnds(t) {
+  const has = v => v !== '' && v != null, C = PLACES()[0] || null;
+  const from = t && has(t.fromLat) ? { lat: +t.fromLat, lng: +t.fromLng, name: t.fromName || 'จุดออกรถ' } : C;
+  const mode = (t && t.endMode) || 'back';
+  const to = mode === 'free' ? null : mode === 'place' && has(t.toLat) ? { lat: +t.toLat, lng: +t.toLng, name: t.toName || 'จุดคืนรถ' } : from;
+  return { from, to, mode };
+}
+const planPath = (t, stops) => { const E = tripEnds(t); return [...(E.from ? [E.from] : []), ...stops, ...(E.to ? [E.to] : [])]; };
+const endText = E => E.mode === 'free' ? 'จบที่จุดสุดท้าย ไม่ต้องกลับ' : E.mode === 'back' ? `กลับ${E.from?.name || 'จุดออกรถ'}` : `คืนรถที่ ${E.to?.name || 'จุดคืนรถ'}`;
 const tripStops = trip => { try { return JSON.parse(trip.stopsJson || '[]').filter(x => x.lat != null && x.lat !== '').map(x => ({ lat: +x.lat, lng: +x.lng, name: x.name })); } catch (e) { return []; } };
 const clock = ms => { const m = Math.floor(ms / 60000); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 
@@ -1105,16 +1287,18 @@ async function showMap(trip) {
   const pts = (r.points || []).map(p => [p.lat, p.lng]);
   const stops = (r.stops || []).filter(x => x.lat !== '' && x.lat != null).map(x => ({ lat: +x.lat, lng: +x.lng, name: x.name }));
   if (!pts.length) { $('map').innerHTML = '<p class="empty" style="margin:16px">เที่ยวนี้ไม่มีข้อมูล GPS</p>'; return; }
-  if (!window.L) { $('map').innerHTML = `<div class="trace" style="margin:16px">${traceSvg(pts, stops, r.company, 600, 420)}</div>`; return; }
+  const E = { from: r.from || r.company, to: r.endMode === 'free' ? null : (r.to || r.from || r.company), mode: r.endMode || 'back' };
+  if (!window.L) { $('map').innerHTML = `<div class="trace" style="margin:16px">${traceSvg(pts, stops, E, 600, 420)}</div>`; return; }
   $('map').innerHTML = '';
   const m = L.map('map', { zoomControl: true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
-  const plan = roadOf(r.routePoly, r.company, stops);
+  const plan = roadOf(r.routePoly, [...(E.from ? [E.from] : []), ...stops, ...(E.to ? [E.to] : [])]);
   drawPlan(m, plan, false);
   const ln = r.snap && r.snap.length > 1 ? r.snap : pts; // เส้นที่วิ่งจริงแบบตามถนน
   L.polyline(ln, { color: '#ffffff', weight: 9, opacity: .9 }).addTo(m);
   const line = L.polyline(ln, { color: '#E11D2E', weight: 5, opacity: .9 }).addTo(m);
-  if (r.company) L.marker([r.company.lat, r.company.lng], { icon: hqIcon() }).bindTooltip('บริษัท').addTo(m);
+  if (E.from) L.marker([E.from.lat, E.from.lng], { icon: hqIcon() }).bindTooltip('ออกจาก ' + esc(E.from.name || '')).addTo(m);
+  if (E.to && (E.to.lat !== E.from?.lat || E.to.lng !== E.from?.lng)) L.marker([E.to.lat, E.to.lng], { icon: hqIcon() }).bindTooltip('คืนรถที่ ' + esc(E.to.name || '')).addTo(m);
   stops.forEach((p, i) => L.marker([p.lat, p.lng], { icon: stopIcon(i + 1, false) })
     .bindTooltip(`${i + 1}. ${esc(p.name || '')}`, { permanent: true, direction: 'top' }).addTo(m));
   const lastDeg = pts.length > 1 ? bearing({ lat: pts[pts.length - 2][0], lng: pts[pts.length - 2][1] }, { lat: pts[pts.length - 1][0], lng: pts[pts.length - 1][1] }) : 0;
@@ -1162,7 +1346,7 @@ function demoRoad(points) {
   out.push(points[points.length - 1]);
   return encodePoly(out);
 }
-const roadOf = (poly, company, stops) => { const r = decodePoly(poly); return r.length > 1 ? r : (company ? [company, ...stops, company] : stops); };
+const roadOf = (poly, path) => { const r = decodePoly(poly); return r.length > 1 ? r : path; };
 // เส้นทางที่วางไว้: เส้นถนนจริงสีเทาเข้ม มีขอบขาว
 function drawPlan(layer, road, strong) {
   if (road.length < 2) return;
@@ -1271,7 +1455,7 @@ function bearing(a, b) {
 const agoText = ms => { const s = Math.max(0, Math.round(ms / 1000)); return s < 60 ? `${s} วินาทีที่แล้ว` : s < 3600 ? `${Math.round(s / 60)} นาทีที่แล้ว` : `${Math.round(s / 3600)} ชม.ที่แล้ว`; };
 
 /** สถานะของเที่ยว: ผ่านจุดไหนแล้ว กำลังไปไหน ออกนอกเส้นทางไหม (pts = [{t,lat,lng}]) */
-function tripState(pts, stops, company, R, road) {
+function tripState(pts, stops, R, road) {
   const visited = stops.map(s => pts.some(p => kmBetween(p, s) < 0.35));
   const last = pts[pts.length - 1], prev = pts.length > 1 ? pts[pts.length - 2] : null;
   let km = 0; for (let i = 1; i < pts.length; i++) { const d = kmBetween(pts[i - 1], pts[i]); if (d >= 0.02) km += d; }
@@ -1281,30 +1465,35 @@ function tripState(pts, stops, company, R, road) {
   if (prev && last.t && prev.t && last.t - prev.t < 5 * 60000) {
     const d = kmBetween(prev, last); st.speed = d / Math.max((last.t - prev.t) / 36e5, 1e-6); if (d > 0.02) st.deg = bearing(prev, last);
   }
-  if (company && stops.length) {
-    const path = road && road.length > 1 ? road : [company, ...stops, company]; let b = Infinity;
+  if (stops.length && road && road.length > 1) {
+    const path = road; let b = Infinity;
     for (let i = 1; i < path.length; i++) b = Math.min(b, segDistKm(last, path[i - 1], path[i]));
     st.off = b > R.offrouteKm ? b : 0;
   }
   st.stale = last.t ? Date.now() - last.t : 0;
   return st;
 }
-function stateText(st, stops) {
+function stateText(st, stops, E) {
   if (!st.last) return { cls: 'wait', text: 'รอสัญญาณ GPS จากมือถือคนขับ' };
   if (st.stale > 3 * 60000) return { cls: 'stale', text: `ไม่ได้รับตำแหน่ง ${agoText(st.stale).replace('ที่แล้ว', '')} แล้ว` };
   if (st.off) return { cls: 'off', text: `ออกนอกเส้นทาง ห่าง ${st.off.toFixed(1)} กม.` };
   if (st.at >= 0) return { cls: 'ok', text: `อยู่ที่จุดที่ ${st.at + 1} ${stops[st.at].name || ''}` };
   if (st.next >= 0) return { cls: 'ok', text: `กำลังไปจุดที่ ${st.next + 1} ${stops[st.next].name || ''}` };
-  return { cls: 'ok', text: 'กำลังกลับบริษัท' };
+  if (E && !E.to) return { cls: 'ok', text: 'ไปครบทุกจุดแล้ว' };
+  return { cls: 'ok', text: E && E.mode === 'place' ? `กำลังไปคืนรถที่ ${E.to.name || ''}` : `กำลังกลับ${(E && E.from && E.from.name) || 'บริษัท'}` };
 }
-function stepper(stops, st) {
-  const dots = [['บริษัท', true], ...stops.map((s, i) => [String(i + 1), st.visited[i]]), ['กลับ', false]];
-  const cur = st.next >= 0 ? st.next + 1 : stops.length + 1;
+function stepper(stops, st, E) {
+  const dots = [['เริ่ม', true], ...stops.map((s, i) => [String(i + 1), st.visited[i]]), ...(E && !E.to ? [] : [[E && E.mode === 'place' ? 'คืนรถ' : 'กลับ', false]])];
+  const cur = st.next >= 0 ? st.next + 1 : Math.min(stops.length + 1, dots.length - 1);
   return `<div class="stepr">${dots.map(([l, done], i) => `${i ? `<span class="sl ${i <= cur && (done || i === cur) ? 'on' : ''}"></span>` : ''}<span class="sd ${done ? 'done' : ''} ${i === cur ? 'cur' : ''}">${l}</span>`).join('')}</div>`;
 }
-function drawTripLayers(layer, trip, pts, stops, company, st, selected) {
+function drawTripLayers(layer, trip, pts, stops, st, selected) {
   layer.clearLayers();
-  if (selected) drawPlan(layer, roadOf(trip.routePoly, company, stops), true);
+  if (selected) {
+    drawPlan(layer, roadOf(trip.routePoly, planPath(trip, stops)), true);
+    const E = tripEnds(trip), isBase = p => PLACES().some(b => kmBetween(b, p) < 0.05);
+    [E.from, E.to].forEach((p, i) => { if (p && !isBase(p) && (i === 0 || p !== E.from)) L.marker([p.lat, p.lng], { icon: hqIcon() }).bindTooltip((i ? 'คืนรถที่ ' : 'ออกจาก ') + esc(p.name || '')).addTo(layer); });
+  }
   const ln = trip.snap && trip.snap.length > 1 ? trip.snap : pts.map(p => [p.lat, p.lng]); // ตามถนนถ้ามี
   if (ln.length > 1) {
     L.polyline(ln, { color: '#ffffff', weight: selected ? 9 : 6, opacity: .9 }).addTo(layer);
@@ -1333,7 +1522,7 @@ async function renderLive() {
   $('lhandle').onclick = () => $('lsheet').classList.toggle('min');
   $('lfit').onclick = () => { MAPS.sel = null; MAPS.fit = false; MAPS.userMoved = false; liveDraw(true); };
   const m = makeMap('lmap');
-  m.setView(S.data.rules.company ? [S.data.rules.company.lat, S.data.rules.company.lng] : [13.75, 100.55], 12);
+  m.setView(PLACES()[0] ? [PLACES()[0].lat, PLACES()[0].lng] : [13.75, 100.55], 12);
   MAPS.live = { map: m, layers: {}, data: null, hq: null };
   m.on('dragstart', () => { MAPS.fit = true; MAPS.userMoved = true; });   // ผู้ใช้เลื่อนแผนที่เอง หยุดซูมอัตโนมัติ
   m.on('rotate', () => { MAPS.userMoved = true; cancelAnimationFrame(MAPS.rotRaf); MAPS.rotRaf = requestAnimationFrame(() => liveDraw()); });
@@ -1350,38 +1539,40 @@ async function liveFetch() {
 }
 function liveDraw(refit) {
   const L0 = MAPS.live; if (!L0 || !L0.data) { if (L0 && L0.err && $('lchip')) $('lchip').textContent = L0.err; return; }
-  const { trips, company } = L0.data, R = S.data.rules, m = L0.map;
-  if (company && !L0.hq) L0.hq = L.marker([company.lat, company.lng], { icon: hqIcon(), zIndexOffset: 50 }).bindTooltip('บริษัท').addTo(m);
+  const { trips } = L0.data, R = S.data.rules, m = L0.map;
+  const bases = L0.data.places && L0.data.places.length ? L0.data.places : PLACES();
+  if (!L0.hq) L0.hq = bases.map(b => L.marker([b.lat, b.lng], { icon: hqIcon(), zIndexOffset: 50 }).bindTooltip(esc(b.name || 'บริษัท')).addTo(m));
   Object.keys(L0.layers).forEach(id => { if (!trips.some(t => t.id === id)) { m.removeLayer(L0.layers[id]); delete L0.layers[id]; } });
   if (MAPS.sel && !trips.some(t => t.id === MAPS.sel)) MAPS.sel = null;
   if (!MAPS.sel && trips.length === 1) MAPS.sel = trips[0].id;
   const rows = trips.map(t => {
     const pts = (t.points || []).map(p => ({ t: p[0], lat: p[1], lng: p[2] }));
     const stops = (t.stops || []).filter(s => s.lat !== '' && s.lat != null).map(s => ({ lat: +s.lat, lng: +s.lng, name: s.name }));
-    const st = tripState(pts, stops, company, R, roadOf(t.routePoly, company, stops)), sel = MAPS.sel === t.id;
+    const E = tripEnds(t), st = tripState(pts, stops, R, roadOf(t.routePoly, planPath(t, stops))), sel = MAPS.sel === t.id;
     if (!L0.layers[t.id]) L0.layers[t.id] = L.layerGroup().addTo(m);
-    drawTripLayers(L0.layers[t.id], t, pts, stops, company, st, sel);
-    return { t, pts, stops, st, sel };
+    drawTripLayers(L0.layers[t.id], t, pts, stops, st, sel);
+    return { t, pts, stops, st, sel, E };
   });
   $('lchip').textContent = L0.err ? 'เชื่อมต่อไม่ได้ กำลังลองใหม่' : trips.length ? `รถกำลังใช้งาน ${trips.length} คัน` : 'ตอนนี้ไม่มีรถออกไปข้างนอก';
-  $('llist').innerHTML = rows.length ? rows.map(({ t, stops, st, sel }) => {
-    const s = stateText(st, stops), exp = +t.expectedKm;
+  $('llist').innerHTML = rows.length ? rows.map(({ t, stops, st, sel, E }) => {
+    const s = stateText(st, stops, E), exp = +t.expectedKm;
     return `<article class="ltrip ${sel ? 'sel' : ''}" data-t="${esc(t.id)}">
       <div class="lrow"><span class="av">${esc(t.driver.slice(0, 1))}</span>
         <div class="lwho"><b>${esc(t.driver)}</b><span>${esc(t.carName || '')}, ออก ${ftime(t.startTime)}</span></div>${plate(t.plate)}</div>
       <div class="lstat ${s.cls}"><span class="lsd"></span>${esc(s.text)}</div>
-      ${stops.length ? stepper(stops, st) : ''}
+      ${stops.length ? stepper(stops, st, E) : ''}
       <div class="lmet"><div><b>${st.km.toFixed(1)}</b><span>กม. ที่วิ่งแล้ว</span></div>
         <div><b>${st.speed != null && st.stale < 3 * 60000 ? Math.round(st.speed) : '–'}</b><span>กม./ชม.</span></div>
         <div><b>${st.last ? agoText(Date.now() - st.last.t).replace('ที่แล้ว', '') : '–'}</b><span>อัปเดตล่าสุด</span></div></div>
-      ${exp > 0 ? `<div class="lexp">กลับถึงบริษัทเลขไมล์ควรอยู่ที่ ${odo(+t.startOdo + exp, 'sm hl')}</div>` : ''}
+      <div class="ln small" style="margin:6px 2px 0">ออกจาก ${esc(E.from?.name || '–')}, ${esc(endText(E))}</div>
+      ${exp > 0 ? `<div class="lexp">จบงานเลขไมล์ควรอยู่ที่ ${odo(+t.startOdo + exp, 'sm hl')}</div>` : ''}
     </article>`;
   }).join('') : '<div class="lempty">ตอนนี้ไม่มีรถออกไปข้างนอก<br><span class="small">เมื่อมีคนกดรับรถและเริ่มบันทึกเส้นทาง รถจะขึ้นบนแผนที่นี้ทันที</span></div>';
   $('llist').querySelectorAll('[data-t]').forEach(el => el.onclick = () => { MAPS.sel = el.dataset.t; MAPS.userMoved = true; liveDraw(); const r = rows.find(x => x.t.id === el.dataset.t); if (r && r.st.last) m.flyTo([r.st.last.lat, r.st.last.lng], Math.max(m.getZoom(), 14), { duration: .6 }); });
   if (refit) m.invalidateSize();
   if (refit || !MAPS.userMoved) {
-    const all = rows.flatMap(r => [...(r.st.last ? [r.st.last] : []), ...(r.sel ? r.stops : [])]);
-    if (company) all.push(company);
+    const all = rows.flatMap(r => [...(r.st.last ? [r.st.last] : []), ...(r.sel ? planPath(r.t, r.stops) : [])]);
+    if (!rows.length) all.push(...bases);
     if (all.length > 1) { m.fitBounds(L.latLngBounds(all.map(p => [p.lat, p.lng])), { ...mapPad(), maxZoom: 15 }); MAPS.fit = true; }
   }
 }
@@ -1421,7 +1612,8 @@ function renderDrive(c) {
   $('dhandle').onclick = () => $('dsheet').classList.toggle('min');
   $('arrive').onclick = () => { navStop(true); renderCheckin(c); };
   if ($('detour')) $('detour').onclick = () => { TR.detour = 12; toast('รถกำลังแวะออกนอกเส้นทาง'); };
-  const m = makeMap('dmap', false), company = S.data.rules.company, stops = tripStops(c.open);
+  const hr = new Date().getHours(); document.body.classList.toggle('night', hr >= 18 || hr < 6); // แผนที่โทนมืดตอนกลางคืน ไม่แยงตา
+  const m = makeMap('dmap', false), E = tripEnds(c.open), company = E.from, stops = tripStops(c.open);
   MAPS.headUp = false;
   m.on('rotate', () => {
     if (Date.now() - (MAPS.progRot || 0) > 400) MAPS.headUp = false; // คนขับหมุนเอง ปิดโหมดหมุนตามรถ
@@ -1436,8 +1628,9 @@ function renderDrive(c) {
   m.on('dragstart', () => { MAPS.follow = false; });
   $('dme').onclick = () => { MAPS.follow = true; trRender(); };
   compPaint();
-  if (company) L.marker([company.lat, company.lng], { icon: hqIcon() }).bindTooltip('บริษัท').addTo(m);
-  const plan = roadOf(c.open.routePoly, company, stops);
+  if (company) L.marker([company.lat, company.lng], { icon: hqIcon() }).bindTooltip('ออกจาก ' + esc(company.name || '')).addTo(m);
+  if (E.to && E.to !== company) L.marker([E.to.lat, E.to.lng], { icon: hqIcon() }).bindTooltip('คืนรถที่ ' + esc(E.to.name || '')).addTo(m);
+  const plan = roadOf(c.open.routePoly, planPath(c.open, stops));
   if (plan.length > 1) { drawPlan(m, plan, true); m.fitBounds(L.latLngBounds(plan.map(p => [p.lat, p.lng])), mapPad()); }
   MAPS.drive = { map: m, layer: L.layerGroup().addTo(m), car: c };
   MAPS.follow = !plan.length;
@@ -1455,15 +1648,15 @@ function trRender() {
   if (!$('dKm') || !TR.st) return;
   const S0 = TR.st, c = S.data.cars.find(x => x.open && x.open.id === S0.tripId);
   if (!c) return;
-  const stops = tripStops(c.open), company = S.data.rules.company;
+  const stops = tripStops(c.open), E = tripEnds(c.open);
   const pts = S0.pts.map((p, i, a) => ({ lat: p[0], lng: p[1], t: i === a.length - 1 && S0.last ? S0.last.t : null }));
   if (S0.prev && pts.length > 1) pts[pts.length - 2].t = S0.prev.t;
-  const st = tripState(pts, stops, company, S.data.rules, roadOf(c.open.routePoly, company, stops)); st.stale = 0;
+  const st = tripState(pts, stops, S.data.rules, roadOf(c.open.routePoly, planPath(c.open, stops))); st.stale = 0;
   MAPS.lastSt = st;
-  const s = stateText(st, stops);
+  const s = stateText(st, stops, E);
   $('dNext').className = 'lstat ' + s.cls; $('dNext').innerHTML = `<span class="lsd"></span>${esc(s.text)}`;
-  $('dStep').innerHTML = stops.length ? stepper(stops, st) : '';
-  if ($('dTrace')) $('dTrace').innerHTML = traceSvg(S0.pts, stops, company);
+  $('dStep').innerHTML = stops.length ? stepper(stops, st, E) : '';
+  if ($('dTrace')) $('dTrace').innerHTML = traceSvg(S0.pts, stops, E);
   if (MAPS.drive && MAPS.drive.car.open.id === S0.tripId) {
     const lay = MAPS.drive.layer; lay.clearLayers();
     stops.forEach((p, i) => L.marker([p.lat, p.lng], { icon: stopIcon(i + 1, st.visited[i]), zIndexOffset: 100 }).bindTooltip(esc(p.name || ''), { direction: 'top' }).addTo(lay));
@@ -1525,9 +1718,9 @@ function compPaint() {
 const NAV = { on: false, r: null, ti: 0, me: null, deg: null, busy: false, lastReq: 0, offN: 0, spoke: {}, view: null, msg: '', mute: store.get('fleet_mute') === '1' };
 const NAV_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/></svg>';
 function navTargets(c) {
-  const C = S.data.rules.company;
+  const E = tripEnds(c.open), T = E.to;
   return [...tripStops(c.open).map((s, i) => ({ lat: +s.lat, lng: +s.lng, name: s.name || `จุดที่ ${i + 1}`, label: `จุดที่ ${i + 1}` })),
-    ...(C ? [{ lat: +C.lat, lng: +C.lng, name: hqName(), label: 'กลับบริษัท' }] : [])];
+    ...(T ? [{ lat: +T.lat, lng: +T.lng, name: T.name || 'จุดคืนรถ', label: E.mode === 'back' ? 'กลับ' : 'คืนรถที่', end: true }] : [])];
 }
 function navStart(c) {
   const T = navTargets(c); if (!T.length) return toast('ยังไม่มีจุดหมาย');
@@ -1604,7 +1797,7 @@ function navUpdate() {
     else if (toMan <= 1.6 && toMan >= 1 && R.steps[si].m > 2500) { if (!NAV.spoke[k + 'f']) { NAV.spoke[k + 'f'] = 1; speak(`อีก ${sayDist(toMan)} ${next.text}`); } }
   } else if (toMan <= 0.2 && !NAV.spoke[k + 'z']) { NAV.spoke[k + 'z'] = 1; speak(`อีก ${sayDist(toMan)} จะถึง ${tgt.name} จุดหมายอยู่ข้างหน้า`); }
 }
-const navDist = km => km < 1 ? `${Math.max(10, Math.round(km * 100) * 10)} เมตร` : `${km.toFixed(km < 10 ? 1 : 0)} กม.`;
+const navDist = km => km < 1 ? `${Math.max(10, Math.round(km * 100) * 10)} ม.` : `${(Math.floor(km * 10) / 10).toFixed(1)} กม.`; // แบบ Google: 12.4 กม. ไม่ปัดทิ้งเศษ
 function navPaint() {
   const ban = $('navban'), bar = $('navbar'), go = $('navgo'); if (!ban || !bar) return;
   ban.hidden = bar.hidden = !NAV.on; if (go) go.hidden = NAV.on; if ($('gmap')) $('gmap').hidden = NAV.on;
@@ -1616,7 +1809,7 @@ function navPaint() {
     + (v.then ? `<div class="nvthen">จากนั้น ${manIcon(v.then.man, v.then.text)}</div>` : '');
   const T = v && v.target, eta = v && !v.arrived ? new Date(Date.now() + v.min * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
   bar.innerHTML = `<div class="nvbar"><div class="nveta">${v && !v.arrived ? `<b>${v.min} นาที</b><span>${navDist(v.left)} · ถึง ${eta} น.</span>` : `<b>นำทาง</b><span>${esc(NAV.msg || '')}</span>`}
-      <em>ไป ${esc(T ? T.label + ' ' + (T.label === 'กลับบริษัท' ? '' : T.name) : '')}</em></div>
+      <em>${esc(T ? (T.end ? T.label + ' ' + T.name : 'ไป' + T.label + ' ' + T.name) : '')}</em></div>
     <button class="nvb ${NAV.mute ? 'muted' : ''}" id="nvmute" aria-label="${NAV.mute ? 'เปิดเสียง' : 'ปิดเสียง'}">${NAV.mute ? NV_ICONS.off : NV_ICONS.on}<i>${NAV.mute ? 'เสียงปิด' : 'เสียง'}</i></button>
     <button class="nvb" id="nvskip" aria-label="ข้ามไปจุดถัดไป">${NV_ICONS.skip}<i>ข้ามจุด</i></button>
     <button class="nvb stop" id="nvstop" aria-label="หยุดนำทาง">${NV_ICONS.stop}<i>หยุด</i></button></div>`;
@@ -1707,12 +1900,12 @@ function navGmaps(c) {
 }
 
 // เปิดเส้นทางเดียวกันใน Google Maps ไว้เทียบ: บริษัท → จุดแวะ → บริษัท
-const hqName = () => (S.data?.rules?.company?.name && S.data.rules.company.name !== 'บริษัท') ? S.data.rules.company.name : 'บริษัท';
-function gmapsLink(stops) {
-  const C = S.data?.rules?.company; if (!C || !stops || !stops.length) return '';
+function gmapsLink(stops, E) {
+  const C = E && E.from; if (!C || !stops || !stops.length) return '';
   const ll = p => `${(+p.lat).toFixed(6)},${(+p.lng).toFixed(6)}`;
-  return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + ll(C) + '&destination=' + ll(C)
-    + '&waypoints=' + encodeURIComponent(stops.map(ll).join('|'));
+  const dest = E.to || stops[stops.length - 1], mids = E.to ? stops : stops.slice(0, -1);
+  return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + ll(C) + '&destination=' + ll(dest)
+    + (mids.length ? '&waypoints=' + encodeURIComponent(mids.map(ll).join('|')) : '');
 }
 
 // ---------- ราคาน้ำมัน ----------
@@ -1722,29 +1915,86 @@ const tripCost = (c, km) => fuelPrice(c.fuel) && c.kmPerLiter ? Math.round(km / 
 
 // ---------- รับรถ ----------
 function renderCheckout(c) {
-  const R = S.data.rules, P = { purpose: '' }, pos = getPos();
+  const R = S.data.rules, P = { purpose: '', from: null, fromAuto: true, end: { mode: 'back' }, endAuto: true }, pos = getPos();
   header('รับรถ', renderHome);
-  $app.innerHTML = `${carCtx(c)}
+  $app.innerHTML = `${offlineBanner()}${carCtx(c)}
     <ol class="steps">
       <li class="st" id="s1"><span class="dot">1</span><h3>ถ่ายรูปหน้าปัด</h3>${photoStep()}</li>
       <li class="st" id="s2"><span class="dot">2</span><h3>เลขไมล์ตอนนี้</h3>${odoInput('odo')}
+        <p class="note" id="odoOcr"></p>
         <p class="note" id="odoHint">${c.lastOdo != null ? 'คืนรถครั้งก่อนที่ ' + n(c.lastOdo) + ' กม.' : 'แตะที่ตัวเลขเพื่อพิมพ์'}</p></li>
       <li class="st" id="s3"><span class="dot">3</span><h3>ไปทำอะไร</h3>
         <div class="chips" id="chips">${PURPOSES.map(p => `<button class="chip" data-p="${esc(p)}">${esc(p)}</button>`).join('')}<button class="chip" data-p="">อื่น ๆ</button></div>
         <input id="other" class="f mt" placeholder="พิมพ์งานที่ไปทำ" style="display:none"></li>
       <li class="st" id="s4"><span class="dot">4</span><h3>จะไปที่ไหนบ้าง<small>เรียงตามลำดับ</small></h3>
+        <div id="fromRow"></div>
+        <div id="quick"></div>
         <div id="stops"></div>
-        <button class="add" id="addStop" type="button">+ เพิ่มจุดแวะ</button>
+        <button class="add" id="addStop" type="button">+ เพิ่มจุดแวะ</button></li>
+      <li class="st" id="s5"><span class="dot">5</span><h3>จบงานแล้ว รถไปอยู่ที่ไหน</h3>
+        <div class="ends" id="endChips"></div><div id="endPick"></div>
         <div id="routeBox"></div></li>
     </ol>
     <div class="dock"><button class="btn" id="submit">ยืนยันรับรถ</button></div>`;
   bindPhoto(c, P, 's1');
+  bindOfflineBanner(() => renderCheckout(c));
 
-  // จุดแวะหลายจุด: ค้นหาจาก Google Maps แล้วแตะเลือก
+  // ---- จุดออกรถ: เลือกสาขาที่ใกล้ที่สุดให้เอง (ไม่อยู่ใกล้สาขาไหน ใช้ตำแหน่งปัจจุบัน เช่น ค้างต่างจังหวัด) ----
+  const baseOpt = b => ({ id: b.id, lat: +b.lat, lng: +b.lng, name: b.name || 'บริษัท', base: true, kind: 'base' });
+  const autoFrom = gp => {
+    const bases = PLACES();
+    if (gp) {
+      const near = bases.map(b => ({ b, d: kmBetween(gp, b) })).sort((x, y) => x.d - y.d)[0];
+      if (near && near.d <= 1) return baseOpt(near.b);
+      return { lat: gp.lat, lng: gp.lng, name: 'จุดรับรถ', kind: 'here' };
+    }
+    if (c.lastLoc && bases.every(b => kmBetween(b, c.lastLoc) > 1)) return { lat: c.lastLoc.lat, lng: c.lastLoc.lng, name: 'ที่คืนรถครั้งก่อน', kind: 'last' };
+    return bases[0] ? baseOpt(bases[0]) : null;
+  };
+  const fromOpts = () => {
+    const gp = P.gp, list = PLACES().map(b => ({ ...baseOpt(b), d: gp ? kmBetween(gp, b) : null }));
+    if (gp) list.push({ lat: gp.lat, lng: gp.lng, name: 'จุดรับรถ', kind: 'here' });
+    if (c.lastLoc) list.push({ lat: c.lastLoc.lat, lng: c.lastLoc.lng, name: 'ที่คืนรถครั้งก่อน', kind: 'last' });
+    return list;
+  };
+  const fromLabel = f => !f ? 'ยังไม่ได้ตั้งที่ตั้ง' : f.kind === 'here' ? 'ตำแหน่งปัจจุบันของคุณ' : f.kind === 'last' ? 'ที่คืนรถครั้งก่อน' : f.name;
+  const drawFrom = () => {
+    const f = P.from, d = f && P.gp && f.kind === 'base' ? kmBetween(P.gp, f) : null;
+    const hint = P.gp === undefined ? 'กำลังหาตำแหน่ง…' : f && f.kind === 'here' ? 'ไม่ได้อยู่ใกล้สาขาไหน ใช้ตำแหน่งที่รับรถ' : d != null ? `ห่างจากคุณ ${d < 1 ? Math.round(d * 1000) + ' ม.' : d.toFixed(1) + ' กม.'}` : '';
+    $('fromRow').innerHTML = `<div class="fromrow"><span class="fic">${ICON.pin}</span><div class="fx2"><small>ออกจาก</small><b>${esc(fromLabel(f))}</b>${hint ? `<span>${esc(hint)}</span>` : ''}</div>
+      <button class="btn sm line" id="chFrom" type="button">เปลี่ยน</button></div>`;
+    $('chFrom').onclick = () => pickSheet('ออกรถจากที่ไหน', fromOpts().map(o => ({ label: fromLabel(o), sub: o.d != null ? `ห่าง ${o.d < 1 ? Math.round(o.d * 1000) + ' ม.' : o.d.toFixed(1) + ' กม.'}` : o.kind === 'here' ? 'ใช้ตำแหน่ง GPS ตอนนี้' : o.kind === 'last' ? 'ตำแหน่งที่คืนรถครั้งก่อน' : '', on: P.from && kmBetween(o, P.from) < 0.01 && o.kind === P.from.kind, v: o })),
+      o => { P.from = o; P.fromAuto = false; if (P.endAuto) P.end = { mode: o.kind === 'base' ? 'back' : 'free' }; drawFrom(); drawEnds(); endsChanged(); });
+  };
+  P.from = autoFrom(null); drawFrom();
+  pos.then(gp => { P.gp = gp; if (P.fromAuto) { P.from = autoFrom(gp); if (P.endAuto) P.end = { mode: P.from && P.from.kind === 'base' ? 'back' : 'free' }; } drawFrom(); drawEnds(); endsChanged(); });
+
+  // ---- จบงานที่ไหน: กลับที่เดิม / ไปคืนที่สาขาอื่น / ไม่กลับ (จบที่จุดสุดท้าย เช่น ค้างต่างจังหวัด) ----
+  const otherBases = () => PLACES().filter(b => !(P.from && P.from.kind === 'base' && P.from.id === b.id));
+  const endTo = () => P.end.mode === 'free' ? null : P.end.mode === 'place' ? P.end.place : P.from;
+  const endPayload = () => ({ mode: P.end.mode, place: P.end.mode === 'place' ? P.end.place : undefined });
+  const drawEnds = () => {
+    const opts = [
+      ['back', P.from && P.from.kind === 'base' ? `กลับ${P.from.name}` : 'กลับจุดที่รับรถ', 'วนกลับมาจอดที่เดิม'],
+      ...(otherBases().length ? [['place', 'ไปคืนที่สาขาอื่น', P.end.mode === 'place' && P.end.place ? P.end.place.name : 'เลือกสาขา/โกดังที่จะไปจอด']] : []),
+      ['free', 'ไม่กลับ จบที่จุดสุดท้าย', 'เช่น เซลค้างต่างจังหวัด คืนรถที่ที่พัก พรุ่งนี้รับรถต่อจากตรงนั้น'],
+    ];
+    $('endChips').innerHTML = opts.map(([k, t, sub]) => `<button type="button" class="endopt ${P.end.mode === k ? 'on' : ''}" data-end="${k}"><b>${esc(t)}</b><span>${esc(sub)}</span></button>`).join('');
+    $('endChips').querySelectorAll('[data-end]').forEach(b => b.onclick = () => {
+      const k = b.dataset.end;
+      if (k === 'place') return pickSheet('ไปคืนรถที่ไหน', otherBases().map(x => ({ label: x.name, sub: '', on: P.end.place && P.end.place.id === x.id, v: x })),
+        x => { P.end = { mode: 'place', place: { id: x.id, lat: +x.lat, lng: +x.lng, name: x.name } }; P.endAuto = false; drawEnds(); endsChanged(); });
+      P.end = { mode: k }; P.endAuto = false; drawEnds(); endsChanged();
+    });
+  };
+  drawEnds();
+
+  // ---- จุดแวะหลายจุด: ค้นหาจาก Google Maps หรือแตะจากสถานที่ประจำ ----
   P.stops = [{ q: '' }];
   const picked = () => P.stops.filter(x => x.pick).map(x => x.pick);
   const allPicked = () => P.stops.length > 0 && P.stops.every(x => x.pick);
-  const clearRoute = () => { P.route = null; $('routeBox').innerHTML = ''; $('s4').classList.remove('done'); };
+  const clearRoute = () => { P.route = null; $('routeBox').innerHTML = ''; $('s4').classList.remove('done'); $('s5').classList.remove('done'); };
+  const endsChanged = () => { clearRoute(); if (allPicked()) calc(); };
   const drawStops = () => {
     $('stops').innerHTML = P.stops.map((x, i) => x.pick
       ? `<div class="pick"><span class="n">${i + 1}</span><div class="pk"><b>${esc(x.pick.name)}</b><span>${esc(x.pick.address || '')}</span></div>
@@ -1767,7 +2017,7 @@ function renderCheckout(c) {
     if (!x.q.trim()) return toast('พิมพ์ชื่อสถานที่ก่อน');
     x.busy = true; drawStops();
     try { x.results = await call('place', { q: x.q }); }
-    catch (e) { x.results = null; toast(e.message, 5000); }
+    catch (e) { x.results = null; toast(netErr(e) ? 'ไม่มีสัญญาณ ค้นหาสถานที่ไม่ได้ เลือกจากสถานที่ประจำด้านบนแทนได้' : e.message, 5000); }
     x.busy = false; drawStops();
     if (x.results && x.results.length === 1 && /^https?:/.test(x.q)) choose(i, 0); // ลิงก์ได้ผลเดียว เลือกให้เลย
   };
@@ -1775,6 +2025,12 @@ function renderCheckout(c) {
     P.stops[i].pick = P.stops[i].results[j]; P.stops[i].results = null;
     drawStops(); clearRoute();
     if (allPicked()) calc();
+  };
+  const addPick = x => {
+    const pk = { name: x.name, address: x.address || '', lat: +x.lat, lng: +x.lng };
+    const empty = P.stops.findIndex(s => !s.pick && !String(s.q || '').trim());
+    if (empty >= 0) P.stops[empty] = { q: '', pick: pk }; else if (P.stops.length < 8) P.stops.push({ q: '', pick: pk }); else return toast('ใส่ได้สูงสุด 8 จุด');
+    drawStops(); clearRoute(); if (allPicked()) calc();
   };
   $('stops').onclick = e => {
     const f = e.target.closest('[data-find]'), pk = e.target.closest('[data-pick]'), rm = e.target.closest('[data-rm]');
@@ -1791,27 +2047,44 @@ function renderCheckout(c) {
     P.stops.push({ q: '' }); drawStops(); clearRoute();
     const ins = $app.querySelectorAll('.stop input'); if (ins.length) ins[ins.length - 1].focus();
   };
+  // ปุ่มลัด: ที่เคยไปล่าสุด + ลูกค้าประจำที่ผู้ดูแลเพิ่มไว้
+  const rec = (S.data.recent || []).slice(0, 8), cus = S.data.customers || [];
+  if (rec.length || cus.length) {
+    $('quick').innerHTML = `<div class="qlbl">แตะเพื่อเพิ่มได้เลย</div><div class="qchips">
+      ${cus.length ? `<button type="button" class="qchip cus" id="qcus">${ICON.star}ลูกค้าประจำ <i>${cus.length}</i></button>` : ''}
+      ${rec.map((x, i) => `<button type="button" class="qchip" data-rec="${i}">${ICON.clock}${esc(x.name)}</button>`).join('')}</div>`;
+    $('quick').querySelectorAll('[data-rec]').forEach(b => b.onclick = () => addPick(rec[+b.dataset.rec]));
+    if ($('qcus')) $('qcus').onclick = () => customerPicker(cus, addPick);
+  }
 
   const drawRoute = () => {
     const r = P.route; if (!r) return;
     const start = +$('odo').value;
-    const legs = r.legs;
+    const legs = r.legs, last = legs[legs.length - 1], hasEnd = last && last.end;
     $('routeBox').innerHTML = `<div class="route"><ul class="rt">
-      <li class="hq"><span class="nm">${esc(hqName())}</span><div class="ad">จุดเริ่มต้น</div></li>
+      <li class="hq"><span class="nm">${esc(fromLabel(P.from))}</span><div class="ad">จุดเริ่มต้น</div></li>
       ${legs.map((l, i) => `<div class="leg">${n(l.km)} กม.</div>
-        ${i < legs.length - 1 ? `<li><span class="nm">${i + 1}. ${esc(l.to)}</span>${l.address ? `<div class="ad">${esc(l.address)}</div>` : ''}</li>` : '<li class="hq"><span class="nm">กลับบริษัท</span></li>'}`).join('')}
+        ${l.end ? `<li class="hq"><span class="nm">${esc(l.to)}</span></li>` : `<li><span class="nm">${i + 1}. ${esc(l.to)}</span>${l.address ? `<div class="ad">${esc(l.address)}</div>` : ''}</li>`}`).join('')}
+      ${hasEnd ? '' : '<li class="hq"><span class="nm">จบงานที่จุดสุดท้าย</span><div class="ad">ไม่ต้องขับกลับ</div></li>'}
       </ul>
-      <div class="sum"><span>รวมไป-กลับ<br><span class="small">ขับประมาณ ${Math.floor(r.totalMin / 60) ? Math.floor(r.totalMin / 60) + ' ชม. ' : ''}${r.totalMin % 60} นาที</span></span><b>${n(r.totalKm)} กม.</b></div>
+      <div class="sum"><span>${P.end.mode === 'back' ? 'รวมไป-กลับ' : 'รวมทั้งหมด'}<br><span class="small">ขับประมาณ ${Math.floor(r.totalMin / 60) ? Math.floor(r.totalMin / 60) + ' ชม. ' : ''}${r.totalMin % 60} นาที</span></span><b>${n(r.totalKm)} กม.</b></div>
       ${tripCost(c, r.totalKm) ? `<div class="cost">ค่าน้ำมันโดยประมาณ <b>${n(tripCost(c, r.totalKm))} บาท</b> (${c.kmPerLiter} กม./ลิตร × ราคา${fuelLabel(c.fuel)}วันนี้ ${fuelPrice(c.fuel)} บาท)</div>` : ''}
-      <div class="expect">${start ? `<p>กลับถึงบริษัท เลขไมล์ควรอยู่ที่ประมาณ</p>${odo(start + r.totalKm, 'lg hl')}` : '<p>กรอกเลขไมล์ในข้อ 2 แล้วจะเห็นว่าตอนกลับควรเป็นเลขเท่าไหร่</p>'}</div>
-      ${gmapsLink(picked()) ? `<a class="gmlink" href="${gmapsLink(picked())}" target="_blank" rel="noopener">ตรวจเส้นทางนี้ใน Google Maps ↗</a>` : ''}
+      <div class="expect">${start ? `<p>จบงานแล้ว เลขไมล์ควรอยู่ที่ประมาณ</p>${odo(start + r.totalKm, 'lg hl')}` : '<p>กรอกเลขไมล์ในข้อ 2 แล้วจะเห็นว่าตอนจบงานควรเป็นเลขเท่าไหร่</p>'}</div>
+      ${gmapsLink(picked(), { from: P.from, to: endTo() }) ? `<a class="gmlink" href="${gmapsLink(picked(), { from: P.from, to: endTo() })}" target="_blank" rel="noopener">ตรวจเส้นทางนี้ใน Google Maps ↗</a>` : ''}
       ${r.demo ? '<p class="fake">โหมดทดลองใช้ระยะทางสมมติ ของจริงคำนวณจาก Google Maps</p>' : ''}</div>`;
   };
   const calc = async () => {
-    if (!allPicked()) { toast('เลือกสถานที่จาก Google Maps ให้ครบทุกจุดก่อน'); return false; }
+    P.routeNet = false;
+    if (!allPicked()) { toast('เลือกสถานที่ให้ครบทุกจุดก่อน'); return false; }
+    if (!P.from) { toast('ผู้ดูแลยังไม่ได้ตั้งที่ตั้งบริษัท'); return false; }
     $('routeBox').innerHTML = '<p class="note">กำลังคำนวณระยะทางจาก Google Maps…</p>';
-    try { P.route = await call('route', { stops: picked() }); drawRoute(); $('s4').classList.add('done'); return true; }
-    catch (e) { $('routeBox').innerHTML = ''; toast(e.message, 5000); return false; }
+    try {
+      P.route = await call('route', { stops: picked(), from: P.from, end: endPayload() });
+      drawRoute(); $('s4').classList.add('done'); $('s5').classList.add('done'); return true;
+    } catch (e) {
+      if (netErr(e)) { P.routeNet = true; $('routeBox').innerHTML = '<p class="note warn">ไม่มีสัญญาณ ยังคำนวณระยะทางไม่ได้ ระบบจะคำนวณให้ตอนส่งเข้าระบบ รับรถต่อได้เลย</p>'; $('s4').classList.add('done'); return false; }
+      $('routeBox').innerHTML = ''; toast(e.message, 5000); return false;
+    }
   };
 
   bindOdoInput('odo', v => {
@@ -1838,38 +2111,78 @@ function renderCheckout(c) {
     if (!P.photo) return toast('ถ่ายรูปหน้าปัดก่อนนะครับ');
     if (!odoV) return toast('กรอกเลขไมล์ก่อนนะครับ');
     if (!purpose) return toast('เลือกว่าไปทำอะไรก่อนนะครับ');
-    if (!allPicked()) { $('s4').scrollIntoView({ behavior: 'smooth' }); return toast('ค้นหาและเลือกสถานที่จาก Google Maps ให้ครบทุกจุด'); }
-    if (!P.route && !(await calc())) return;
+    if (!allPicked()) { $('s4').scrollIntoView({ behavior: 'smooth' }); return toast('เลือกสถานที่ให้ครบทุกจุด (ค้นหา หรือแตะจากสถานที่ประจำ)'); }
+    if (!P.route && !(await calc()) && !P.routeNet) return;
     const stops = picked();
     const b = $('submit'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
+    const body = { car: c.id, driver: me(), odo: +odoV, purpose, destination: stops.map(x => x.name).join('\n'), stops,
+      photo: P.photo, photoAgeMin: P.photoAgeMin, from: P.from, end: endPayload(), clientId: rid() };
     try {
-      const p = await pos;
-      const r = await call('checkout', { car: c.id, driver: me(), odo: +odoV, purpose, destination: stops.map(x => x.name).join('\n'), stops,
-        photo: P.photo, photoAgeMin: P.photoAgeMin, lat: p?.lat, lng: p?.lng });
-      renderDone('รับรถแล้ว', `<p>${esc(c.name)} ออกที่เลขไมล์ ${n(odoV)} กม.</p>
-        ${r.expectedKm ? `<div class="expect"><p>ไป-กลับ ${n(r.expectedKm)} กม. กลับถึงบริษัทเลขไมล์ควรอยู่ที่ประมาณ</p>${odo(+odoV + +r.expectedKm, 'lg hl')}</div>` : ''}
-        <p class="small mt">กดเริ่มขับเพื่อบันทึกเส้นทาง GPS แล้ววางมือถือเปิดหน้าจอค้างไว้ในรถ</p>`, r.flags,
-        { label: 'เริ่มขับ บันทึกเส้นทาง', fn: async () => { S.data = await call('init'); openDrive(c.id); } });
+      const p = await pos; body.lat = p?.lat; body.lng = p?.lng;
+      let r, off = false;
+      try { r = await call('checkout', body); }
+      catch (e) {
+        if (!netErr(e)) throw e;
+        body.clientTime = Date.now(); obAdd('checkout', body); off = true;
+        r = { id: body.clientId, flags: [], expectedKm: P.route ? P.route.totalKm : '' };
+      }
+      // อัปเดตข้อมูลในเครื่องทันที (ใช้ต่อได้แม้ไม่มีเน็ต)
+      c.open = { id: r.id, status: 'open', car: c.id, driver: me(), purpose, destination: body.destination, stopsJson: JSON.stringify(stops),
+        startTime: new Date(body.clientTime || Date.now()).toISOString(), startOdo: +odoV, expectedKm: r.expectedKm || '', routePoly: P.route ? P.route.poly || '' : '',
+        fromName: P.from ? P.from.name : '', fromLat: P.from ? P.from.lat : '', fromLng: P.from ? P.from.lng : '', endMode: P.end.mode,
+        toName: endTo() ? endTo().name : '', toLat: endTo() ? endTo().lat : '', toLng: endTo() ? endTo().lng : '', flags: (r.flags || []).join(' | '), pending: off };
+      cacheInit();
+      renderDone(off ? 'บันทึกไว้ในเครื่องแล้ว' : 'รับรถแล้ว', `<p>${esc(c.name)} ออกที่เลขไมล์ ${n(odoV)} กม.</p>
+        ${off ? '<div class="offbar q" style="text-align:left">ตอนนี้ไม่มีสัญญาณ ระบบจะส่งการรับรถเข้าระบบให้เองเมื่อมีสัญญาณ ขับต่อได้เลย</div>' : ''}
+        ${r.expectedKm ? `<div class="expect"><p>${P.end.mode === 'back' ? 'ไป-กลับ' : 'ระยะทาง'} ${n(r.expectedKm)} กม. จบงานแล้วเลขไมล์ควรอยู่ที่ประมาณ</p>${odo(+odoV + +r.expectedKm, 'lg hl')}</div>` : ''}
+        <p class="small mt">กดเริ่มขับเพื่อบันทึกเส้นทาง GPS แล้ววางมือถือเปิดหน้าจอค้างไว้ในรถ</p>`, r.flags || [],
+        { label: 'เริ่มขับ บันทึกเส้นทาง', fn: async () => { if (!off) { try { S.data = await call('init'); cacheInit(); } catch (e) {} } openDrive(c.id); } });
     } catch (e) { toast(e.message, 5000); b.disabled = false; b.textContent = 'ยืนยันรับรถ'; }
   };
   window.scrollTo(0, 0);
 }
 
+// เลือกจากรายการ (แผ่นเลื่อนขึ้นจากด้านล่าง)
+function pickSheet(title, items, onPick) {
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(title)}"><p>${esc(title)}</p>
+    <div class="plist">${items.map((it, i) => `<button type="button" class="pitem ${it.on ? 'on' : ''}" data-i="${i}"><b>${esc(it.label)}</b>${it.sub ? `<span>${esc(it.sub)}</span>` : ''}</button>`).join('') || '<p class="small">ไม่มีรายการ</p>'}</div>
+    <button class="btn line mt" data-x="1">ปิด</button></div>`;
+  document.body.appendChild(o);
+  o.onclick = e => { const b = e.target.closest('[data-i]'); if (b) { o.remove(); onPick(items[+b.dataset.i].v); } else if (e.target === o || e.target.dataset.x) o.remove(); };
+}
+// เลือกลูกค้าประจำ (ค้นหาในรายชื่อได้)
+function customerPicker(list, onPick) {
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="sheet tall" role="dialog" aria-label="ลูกค้าประจำ"><p>ลูกค้า/สถานที่ประจำ</p>
+    <input class="f" id="cq" placeholder="พิมพ์ชื่อเพื่อค้นหา" autocomplete="off"><div class="plist mt" id="cl"></div>
+    <button class="btn line mt" data-x="1">ปิด</button></div>`;
+  document.body.appendChild(o);
+  const draw = () => {
+    const q = $('cq').value.trim().toLowerCase();
+    const rs = list.map((x, i) => ({ x, i })).filter(({ x }) => !q || (x.name + ' ' + (x.address || '')).toLowerCase().includes(q)).slice(0, 80);
+    $('cl').innerHTML = rs.length ? rs.map(({ x, i }) => `<button type="button" class="pitem" data-i="${i}"><b>${esc(x.name)}</b>${x.address ? `<span>${esc(x.address)}</span>` : ''}</button>`).join('') : '<p class="small">ไม่พบชื่อนี้</p>';
+  };
+  $('cq').oninput = draw; draw();
+  o.onclick = e => { const b = e.target.closest('[data-i]'); if (b) { o.remove(); onPick(list[+b.dataset.i]); } else if (e.target === o || e.target.dataset.x) o.remove(); };
+}
+
 // ---------- คืนรถ ----------
 function renderCheckin(c) {
-  const t = c.open, R = S.data.rules, P = {}, pos = getPos(), exp = +t.expectedKm;
+  const t = c.open, R = S.data.rules, P = {}, pos = getPos(), exp = +t.expectedKm, E = tripEnds(t);
   const stops = t.destination ? String(t.destination).split('\n') : [];
   header('คืนรถ', renderHome);
-  $app.innerHTML = `${carCtx(c)}
+  $app.innerHTML = `${offlineBanner()}${carCtx(c)}
     ${trHas(t.id) ? `<div class="gpsrow"><span class="pulse ${trActive(t.id) ? '' : 'off'}"></span>GPS บันทึกไว้ ${TR.st.km.toFixed(1)} กม. จะส่งพร้อมการคืนรถ</div>` : ''}
     <div class="plan"><b>${esc(t.driver)}</b> ออกไป${esc(t.purpose)} ตั้งแต่ ${ftime(t.startTime)}
-      ${stops.length ? `<ol>${stops.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}</div>
+      ${stops.length ? `<ol>${stops.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}
+      <div class="small">ออกจาก ${esc(E.from?.name || '–')}, ${esc(endText(E))}</div></div>
     <div class="compare">
       <div><p>ออกไปที่</p>${odo(t.startOdo, 'sm')}</div>
-      <div><p>ควรกลับมาที่</p>${exp > 0 ? odo(+t.startOdo + exp, 'sm hl') : '<b>–</b>'}</div></div>
+      <div><p>ควรจบที่</p>${exp > 0 ? odo(+t.startOdo + exp, 'sm hl') : '<b>–</b>'}</div></div>
     <ol class="steps">
       <li class="st" id="s1"><span class="dot">1</span><h3>ถ่ายรูปหน้าปัด</h3>${photoStep()}</li>
-      <li class="st" id="s2"><span class="dot">2</span><h3>เลขไมล์ตอนนี้</h3>${odoInput('odo')}<div id="result"></div></li>
+      <li class="st" id="s2"><span class="dot">2</span><h3>เลขไมล์ตอนนี้</h3>${odoInput('odo')}<p class="note" id="odoOcr"></p><div id="result"></div></li>
       <li class="st" id="s3"><span class="dot">3</span><h3>เติมน้ำมันไหม</h3>
         <div class="chips" id="fuelChips"><button class="chip on" data-f="0">ไม่ได้เติม</button><button class="chip" data-f="1">เติมน้ำมัน</button></div>
         <div id="fuel" style="display:none">
@@ -1887,6 +2200,7 @@ function renderCheckin(c) {
     </ol>
     <div class="dock"><button class="btn" id="submit">ยืนยันคืนรถ</button></div>`;
   bindPhoto(c, P, 's1');
+  bindOfflineBanner(() => renderCheckin(c));
   $('s3').classList.add('done');
   bindOdoInput('odo', v => {
     const d = v - t.startOdo, el = $('result');
@@ -1963,27 +2277,40 @@ function renderCheckin(c) {
     try {
       if (trHas(t.id)) {
         b.textContent = 'กำลังส่งเส้นทาง GPS…';
-        if (!(await trStop())) toast('ส่งเส้นทาง GPS บางส่วนไม่สำเร็จ ระบบจะบันทึกเท่าที่มี', 4000);
+        await trStop();
         b.textContent = 'กำลังบันทึก…';
       }
       const p = await pos;
-      const r = await call('checkin', { tripId: t.id, odo: +odoV, photo: P.photo, photoAgeMin: P.photoAgeMin, lat: p?.lat, lng: p?.lng,
-        fuelLiters: $('fl').value, fuelBaht: $('fb').value, fuelType: curType(), receipt: +$('fl').value > 0 ? P.receipt : '', note: $('note').value });
+      const body = { tripId: t.id, odo: +odoV, photo: P.photo, photoAgeMin: P.photoAgeMin, lat: p?.lat, lng: p?.lng,
+        fuelLiters: $('fl').value, fuelBaht: $('fb').value, fuelType: curType(), receipt: +$('fl').value > 0 ? P.receipt : '', note: $('note').value };
+      // เส้นทาง GPS ที่ยังส่งไม่ได้ เก็บเข้าคิวในเครื่องก่อนการคืนรถ (ระบบคำนวณ GPS ตอนคืนรถ)
+      const keepGps = () => { if (trHas(t.id) && TR.st.queue.length) for (let i = 0; i < TR.st.queue.length; i += 500) obAdd('track', { tripId: t.id, points: TR.st.queue.slice(i, i + 500) }); };
+      let r, off = false;
+      const queue = () => { body.clientTime = Date.now(); keepGps(); obAdd('checkin', body); off = true; r = { id: t.id, distance: +odoV - +t.startOdo, flags: [], fuelCostEst: tripCost(c, +odoV - +t.startOdo) }; };
+      if (obPendingTrip(t.id) || !navigator.onLine) queue();
+      else {
+        try { r = await call('checkin', body); keepGps(); }
+        catch (e) { if (!netErr(e)) throw e; queue(); }
+      }
       if (trHas(t.id)) trClear();
-      renderDone('คืนรถแล้ว', `<p>${esc(c.name)} รอบนี้วิ่ง ${n(r.distance)} กม.${r.fuelCostEst ? `<br>ค่าน้ำมันเที่ยวนี้ประมาณ ${n(r.fuelCostEst)} บาท` : ''}</p><p class="small">ขอบคุณครับ</p>`, r.flags);
+      c.open = null; c.lastOdo = +odoV; if (p) c.lastLoc = { lat: p.lat, lng: p.lng }; cacheInit();
+      if (off) obFlush();
+      renderDone(off ? 'บันทึกไว้ในเครื่องแล้ว' : 'คืนรถแล้ว', `<p>${esc(c.name)} รอบนี้วิ่ง ${n(r.distance)} กม.${r.fuelCostEst ? `<br>ค่าน้ำมันเที่ยวนี้ประมาณ ${n(r.fuelCostEst)} บาท` : ''}</p>
+        ${off ? '<div class="offbar q" style="text-align:left">ตอนนี้ไม่มีสัญญาณ ระบบจะส่งการคืนรถเข้าระบบให้เองเมื่อมีสัญญาณ ไม่ต้องทำอะไรเพิ่ม</div>' : ''}<p class="small">ขอบคุณครับ</p>`, r.flags || []);
     } catch (e) { toast(e.message, 5000); b.disabled = false; b.textContent = 'ยืนยันคืนรถ'; }
   };
   window.scrollTo(0, 0);
 }
 
 function renderDone(title, html, flags, action) {
-  header('Mks Gps');
+  header('Mks Gps'); S.screen = 'done';
   $app.innerHTML = `<div class="done-box"><div class="tick" aria-hidden="true"></div><h2 class="title">${title}</h2>${html}
     ${flags.length ? `<ul class="flags">${flags.map(f => `<li>${esc(f)}</li>`).join('')}</ul><p class="small mt">รายการนี้จะส่งให้ผู้ดูแลตรวจสอบ</p>` : ''}</div>
     ${action ? '<div class="mt" style="max-width:528px;margin:22px auto 0"><button class="btn line" id="home2">ไว้ทีหลัง กลับหน้าแรก</button></div>' : ''}
     <div class="dock"><button class="btn" id="home">${action ? esc(action.label) : 'กลับหน้าแรก'}</button></div>`;
-  $('home').onclick = action ? action.fn : boot;
-  if ($('home2')) $('home2').onclick = boot;
+  const home = () => { S.offline || !navigator.onLine ? renderHome() : boot(); };
+  $('home').onclick = action ? action.fn : home;
+  if ($('home2')) $('home2').onclick = home;
   window.scrollTo(0, 0);
 }
 
@@ -2044,17 +2371,18 @@ function drawOverview() {
   const today = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' });
   $app.innerHTML = `
     <p class="small" style="margin:0">${today}</p>
-    <h2 class="title">${out.length ? `รถออกไป ${out.length} คัน` : 'รถอยู่ที่บริษัทครบ'}</h2>
+    <h2 class="title">${out.length ? `รถออกไป ${out.length} คัน` : 'รถว่างครบทุกคัน'}</h2>
     ${S.data.adminDefault && !DEMO ? '<div class="verdict warn hqwarn"><b>PIN ผู้ดูแลยังเป็นค่าเริ่มต้น (9999)</b> ใครก็เดาได้ <button class="linkbtn" data-go="settings">เปลี่ยนในหน้าตั้งค่า</button></div>' : ''}
-    ${S.data.rules.company ? '' : '<div class="verdict warn hqwarn"><b>ยังไม่ได้ตั้งที่ตั้งบริษัท</b> ระบบจึงคำนวณระยะทางไม่ได้ <button class="linkbtn" data-go="settings">ตั้งในหน้าตั้งค่า</button></div>'}
+    ${PLACES().length ? '' : '<div class="verdict warn hqwarn"><b>ยังไม่ได้ตั้งที่ตั้งบริษัท</b> ระบบจึงคำนวณระยะทางไม่ได้ <button class="linkbtn" data-go="settings">ตั้งในหน้าตั้งค่า</button></div>'}
 
     <div class="ocars">${S.data.cars.map(c => {
       const o = c.open, exp = o && +o.expectedKm > 0 ? +o.startOdo + +o.expectedKm : null;
       return `<article class="ocar ${o ? 'busy' : ''}">
-        <div class="car-top">${plate(c.plate)}<span class="status ${o ? 'mine' : 'free'}">${o ? 'ออกไปข้างนอก' : 'อยู่ที่บริษัท'}</span></div>
+        <div class="car-top">${plate(c.plate)}<span class="status ${o ? 'mine' : 'free'}">${o ? 'ออกไปข้างนอก' : 'ว่าง'}</span></div>
         <h3>${esc(c.name)}</h3>
         ${o ? `<p class="who"><b>${esc(o.driver)}</b> ไป${esc(o.purpose)} ตั้งแต่ ${ftime(o.startTime)}${o.destination ? `<br>${String(o.destination).split('\n').map((x, i) => `${i + 1}) ${esc(x)}`).join(' ')}` : ''}</p>
-          ${exp ? `<div class="row"><span class="small">ควรกลับมาที่</span>${odo(exp, 'sm hl')}</div>` : ''}
+          <p class="small" style="margin:0 0 8px">ออกจาก ${esc(tripEnds(o).from?.name || '–')}, ${esc(endText(tripEnds(o)))}</p>
+          ${exp ? `<div class="row"><span class="small">จบงานไมล์ควรอยู่ที่</span>${odo(exp, 'sm hl')}</div>` : ''}
           <button class="btn soft" data-go="live">ดูตำแหน่งบนแผนที่</button>`
         : `<div class="row"><span class="small">เลขไมล์ล่าสุด</span>${odo(c.lastOdo, 'sm')}</div>`}
       </article>`;
@@ -2093,6 +2421,8 @@ function tripCardHtml(t) {
       ${t.status === 'open' ? '<span class="badge open">ยังไม่คืน</span>' : `<span class="km">${n(t.distance)} กม.</span>`}</div>
     <div class="ln">${fdt(t.startTime)}${t.endTime ? ' ถึง ' + ftime(t.endTime) : ''}, ${esc(t.purpose)}</div>
     ${t.returnedBy && t.returnedBy !== t.driver ? `<div class="ln">คืนรถโดย ${esc(t.returnedBy)}</div>` : ''}
+    ${t.fromName || t.endMode ? `<div class="ln">ออกจาก ${esc(tripEnds(t).from?.name || '–')}, ${esc(endText(tripEnds(t)))}</div>` : ''}
+    ${t.offline ? `<div class="ln offln">${esc(String(t.offline).replace(/ \| /g, ', '))}</div>` : ''}
     ${stops.length ? `<div class="ln">${stops.map((x, i) => `${i + 1}) ${esc(x)}`).join('  ')}</div>` : ''}
     <div class="ln">เลขไมล์ ${n(t.startOdo)} ถึง ${n(t.endOdo) || '…'}${exp > 0 ? `, Google Maps ${n(exp)} กม. (ควรจบที่ ${n(+t.startOdo + exp)})` : ''}</div>
     ${t.fuelCostEst ? `<div class="ln">ค่าน้ำมันตามระยะทางประมาณ ${n(t.fuelCostEst)} บาท</div>` : ''}
@@ -2105,19 +2435,37 @@ function tripCardHtml(t) {
     ${f.map(x => `<div class="fx">${esc(x)}</div>`).join('')}
     ${ph ? `<div class="ph">${ph}</div>` : ''}
     <div class="tacts">${t.status === 'closed' && +t.gpsPoints > 0 ? `<button class="btn sm soft" data-map="${esc(t.id)}">ดูเส้นทางบนแผนที่</button>` : ''}
-      ${f.length && t.status === 'closed' && !rv ? `<button class="btn sm" data-review="${esc(t.id)}">ตรวจแล้ว</button>` : ''}</div>
+      ${f.length && t.status === 'closed' && !rv ? `<button class="btn sm" data-ok="${esc(t.id)}">ตรวจแล้ว ไม่มีปัญหา</button><button class="btn sm line" data-review="${esc(t.id)}">บันทึกผลตรวจ</button>` : ''}</div>
     ${rv ? `<div class="rvbox"><b>ตรวจแล้ว</b> ${t.reviewAt ? fdt(t.reviewAt) : ''}${t.reviewNote ? `<br>${esc(t.reviewNote)}` : ''} <button class="linkbtn" data-review="${esc(t.id)}">แก้ไข</button></div>` : ''}</div>`;
 }
 function bindTripCards() {
   $app.querySelectorAll('[data-review]').forEach(b => b.onclick = () => reviewSheet(S.trips.find(t => t.id === b.dataset.review)));
+  // ตรวจผ่านในแตะเดียว (กดเลิกทำได้ทันที)
+  $app.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
+    const t = S.trips.find(x => x.id === b.dataset.ok); b.disabled = true; b.textContent = 'กำลังบันทึก…';
+    try {
+      const r = await call('review', { pin: S.adminPin, tripId: t.id, note: '' });
+      Object.assign(t, { reviewStatus: r.reviewStatus, reviewNote: r.reviewNote, reviewAt: r.reviewAt });
+      drawReport(); undoToast('บันทึกว่าตรวจแล้ว', async () => {
+        const u = await call('review', { pin: S.adminPin, tripId: t.id, undo: true });
+        Object.assign(t, { reviewStatus: u.reviewStatus, reviewNote: u.reviewNote, reviewAt: u.reviewAt }); drawReport();
+      });
+    } catch (e) { toast(e.message, 4000); b.disabled = false; b.textContent = 'ตรวจแล้ว ไม่มีปัญหา'; }
+  });
   $app.querySelectorAll('[data-map]').forEach(b => b.onclick = () => showMap(S.trips.find(t => t.id === b.dataset.map)));
   $app.querySelectorAll('.thumb').forEach(i => i.onclick = () => {
     const z = document.createElement('div'); z.className = 'zoom'; z.innerHTML = `<img src="${i.src}" alt="">`;
     z.onclick = () => z.remove(); document.body.appendChild(z);
   });
 }
+function undoToast(msg, undo) {
+  const t = $('toast'); t.innerHTML = `${esc(msg)} <button class="linkbtn" id="tUndo" style="color:#fff;display:inline;margin:0 0 0 8px;padding:0">เลิกทำ</button>`;
+  t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 5000);
+  $('tUndo').onclick = async () => { t.style.display = 'none'; try { await undo(); } catch (e) { toast(e.message); } };
+}
 function drawTrips() {
-  const list = monthTrips();
+  const all = monthTrips();
+  const list = all.filter(t => (!S.fCar || t.car === S.fCar) && (!S.fDrv || t.driver === S.fDrv));
   const flagged = list.filter(t => flagsOf(t).length && t.status === 'closed');
   const pending = flagged.filter(t => t.reviewStatus !== 'done'), reviewed = flagged.filter(t => t.reviewStatus === 'done');
   const view = S.tripView || 'pending';
@@ -2127,7 +2475,10 @@ function drawTrips() {
   }).filter(x => x.trips);
   const shown = view === 'pending' ? pending : view === 'reviewed' ? reviewed : list;
   $app.innerHTML = `
-    <div class="bar"><input id="month" class="f" type="month" value="${S.month}" aria-label="เดือน"><span class="sp"></span><button class="btn sm line" id="csv">ดาวน์โหลด Excel</button></div>
+    <div class="bar"><input id="month" class="f" type="month" value="${S.month}" aria-label="เดือน">
+      <select id="fCar" class="f" aria-label="กรองตามรถ"><option value="">รถทุกคัน</option>${(S.data.carsAll || S.data.cars).map(c => `<option value="${esc(c.id)}" ${S.fCar === c.id ? 'selected' : ''}>${esc(c.name)} ${esc(String(c.plate || '').split(' ').slice(0, 2).join(' '))}</option>`).join('')}</select>
+      <select id="fDrv" class="f" aria-label="กรองตามคนขับ"><option value="">ทุกคน</option>${[...new Set([...S.data.drivers, ...all.map(t => t.driver)])].map(d => `<option ${S.fDrv === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
+      <span class="sp"></span><button class="btn sm line" id="csv">ดาวน์โหลด Excel</button></div>
     <div class="seg" role="tablist">
       <button data-v="pending" class="${view === 'pending' ? 'on' : ''}">รอตรวจ <i>${pending.length}</i></button>
       <button data-v="reviewed" class="${view === 'reviewed' ? 'on' : ''}">ตรวจแล้ว <i>${reviewed.length}</i></button>
@@ -2138,6 +2489,8 @@ function drawTrips() {
       ${drivers.map(x => `<tr><td>${esc(x.d)}</td><td class="r">${x.trips}</td><td class="r">${n(x.km) || 0}</td><td class="r">${x.flags}</td><td class="r">${x.pend ? `<span class="badge bad">${x.pend}</span>` : '0'}</td></tr>`).join('')}</table>` : '<div class="empty">เดือนนี้ยังไม่มีการใช้รถ</div>'}`;
   $app.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { S.tripView = b.dataset.v; drawTrips(); });
   $('month').onchange = e => { S.month = e.target.value || monthKey(new Date()); drawTrips(); };
+  $('fCar').onchange = e => { S.fCar = e.target.value; drawTrips(); };
+  $('fDrv').onchange = e => { S.fDrv = e.target.value; drawTrips(); };
   $('csv').onclick = () => downloadCsv(list);
   bindTripCards();
 }
@@ -2184,16 +2537,29 @@ async function renderSettings() {
   try { st = await call('settingsGet', { pin: S.adminPin }); }
   catch (e) { $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   const E = { cars: st.cars.map(c => ({ ...c })), drivers: st.drivers.map(d => ({ ...d })) };
+  const PL = { places: (st.places && st.places.length ? st.places : st.company ? [st.company] : []).map(x => ({ ...x })), customers: (st.customers || []).map(x => ({ ...x })), cq: '' };
+  const savePlaces = async list => { const r = await call('placesSave', { pin: S.adminPin, places: list }); PL.places = r.map(x => ({ ...x })); S.data.places = r; S.data.rules.company = r[0]; draw(); toast('บันทึกที่ตั้งแล้ว'); };
+  const saveCus = async list => { const r = await call('customersSave', { pin: S.adminPin, customers: list }); PL.customers = r.map(x => ({ ...x })); S.data.customers = r; draw(); toast('บันทึกรายชื่อแล้ว'); };
   const fuelOpts = sel => st.fuelTypes.map(f => `<option value="${f.id}" ${f.id === sel ? 'selected' : ''}>${esc(f.label)}</option>`).join('');
   const randPin = () => { let p; do { p = String(Math.floor(100000 + Math.random() * 900000)); } while (E.drivers.some(d => d.pin === p) || p === '999999'); return p; };
   const draw = () => {
     $app.innerHTML = `
       <h2 class="title">ตั้งค่า</h2><p class="lead">เฉพาะผู้ดูแลเท่านั้นที่เข้าหน้านี้ได้ แก้แล้วกดบันทึกด้านล่าง</p>
 
-      <h3 class="h2">ที่ตั้งบริษัท</h3>
-      <div class="sbox"><div class="lrow"><div class="lwho"><b>${st.company ? esc(st.company.name || 'ตั้งไว้แล้ว') : 'ยังไม่ได้ตั้ง'}</b>
-        <span>${st.company ? `<a href="https://www.google.com/maps?q=${st.company.lat},${st.company.lng}" target="_blank" rel="noopener">ดูตำแหน่งใน Google Maps ↗</a>` : 'ต้องตั้งก่อน ระบบถึงจะคำนวณระยะทางได้'}</span></div>
-        <button class="btn sm ${st.company ? 'line' : ''}" id="sHq">${st.company ? 'เปลี่ยน' : 'ตั้งเลย'}</button></div></div>
+      <h3 class="h2">ที่ตั้ง (สำนักงาน สาขา โกดัง)</h3>
+      <p class="small" style="margin-top:-6px">ตอนรับรถ แอปเลือกที่ตั้งที่ใกล้คนขับที่สุดเป็นจุดออกรถให้เอง จุดแรกคือที่ตั้งหลัก</p>
+      ${PL.places.length ? PL.places.map((p, i) => `<div class="sbox"><div class="lrow"><span class="pnum">${i + 1}</span><div class="lwho"><b>${esc(p.name || 'ไม่มีชื่อ')}</b>
+        <span><a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" rel="noopener">ดูใน Google Maps ↗</a>${i === 0 ? ', ที่ตั้งหลัก' : ''}</span></div>
+        <button class="btn sm line" data-pedit="${i}">แก้</button>${PL.places.length > 1 ? `<button class="linkbtn" data-pdel="${i}">ลบ</button>` : ''}</div></div>`).join('')
+        : '<div class="sbox"><p class="note warn" style="margin:0">ยังไม่ได้ตั้งที่ตั้ง ต้องตั้งก่อน ระบบถึงจะคำนวณระยะทางได้</p></div>'}
+      <button class="add" id="sAddPlace" style="padding-left:0">+ เพิ่มที่ตั้ง</button>
+
+      <h3 class="h2">ลูกค้า/สถานที่ประจำ</h3>
+      <p class="small" style="margin-top:-6px">คนขับแตะเลือกได้ทันทีตอนรับรถ ไม่ต้องค้นหาทุกครั้ง บันทึกทันทีเมื่อเพิ่มหรือลบ</p>
+      ${PL.customers.length > 6 ? `<input class="f" id="cusQ" placeholder="ค้นหาในรายชื่อ ${PL.customers.length} รายการ" value="${esc(PL.cq)}" style="margin-bottom:8px">` : ''}
+      <div class="sbox culist">${PL.customers.length ? PL.customers.map((x, i) => ({ x, i })).filter(({ x }) => !PL.cq || (x.name + ' ' + (x.address || '')).toLowerCase().includes(PL.cq.toLowerCase())).slice(0, 60).map(({ x, i }) => `<div class="curow"><div class="lwho"><b>${esc(x.name)}</b><span>${esc(x.address || '')}</span></div><button class="linkbtn" data-cdel="${i}">ลบ</button></div>`).join('')
+        : '<p class="small" style="margin:0">ยังไม่มีรายชื่อ</p>'}</div>
+      <button class="add" id="sAddCus" style="padding-left:0">+ เพิ่มลูกค้า/สถานที่</button>
 
       <h3 class="h2">รถบริษัท</h3>
       ${E.cars.map((c, i) => `<div class="sbox ${c.active === false ? 'off' : ''}">
@@ -2231,7 +2597,15 @@ async function renderSettings() {
     $app.querySelectorAll('[data-rand]').forEach(b => b.onclick = () => { E.drivers[+b.dataset.rand].pin = randPin(); draw(); });
     $('sAddCar').onclick = () => { E.cars.push({ id: '', name: '', plate: '', fuel: 'diesel', kmPerLiter: 12, active: true }); draw(); };
     $('sAddDrv').onclick = () => { E.drivers.push({ name: '', pin: randPin(), active: true }); draw(); };
-    $('sHq').onclick = () => companySheet(() => renderSettings());
+    $app.querySelectorAll('[data-pedit]').forEach(b => b.onclick = () => { const i = +b.dataset.pedit, cur = PL.places[i];
+      placeSheet({ title: 'แก้ที่ตั้ง', cur, namePh: 'ชื่อเรียก เช่น สำนักงานใหญ่ โกดังบางพลี', onSave: async v => { const l = PL.places.map(x => ({ ...x })); l[i] = { ...l[i], ...v }; await savePlaces(l); } }); });
+    $app.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { const i = +b.dataset.pdel;
+      ask(`ลบที่ตั้ง "${PL.places[i].name}"? รายการใช้รถเก่ายังอยู่ครบ`, 'ลบ', async () => { try { await savePlaces(PL.places.filter((_, j) => j !== i)); } catch (e) { toast(e.message, 4000); } }); });
+    $('sAddPlace').onclick = () => placeSheet({ title: 'เพิ่มที่ตั้ง', cur: null, namePh: 'ชื่อเรียก เช่น สาขาอ้อมใหญ่ โกดังบางพลี', onSave: v => savePlaces([...PL.places, v]) });
+    $app.querySelectorAll('[data-cdel]').forEach(b => b.onclick = () => { const i = +b.dataset.cdel;
+      ask(`ลบ "${PL.customers[i].name}" ออกจากรายชื่อ?`, 'ลบ', async () => { try { await saveCus(PL.customers.filter((_, j) => j !== i)); } catch (e) { toast(e.message, 4000); } }); });
+    $('sAddCus').onclick = () => placeSheet({ title: 'เพิ่มลูกค้า/สถานที่ประจำ', cur: null, namePh: 'ชื่อลูกค้าหรือสถานที่', needAddr: true, onSave: v => saveCus([...PL.customers, v]) });
+    if ($('cusQ')) $('cusQ').oninput = e => { PL.cq = e.target.value; const pos = e.target.selectionStart; draw(); const q = $('cusQ'); q.focus(); q.setSelectionRange(pos, pos); };
     $('sSave').onclick = async () => {
       const a1 = $('sAdm').value.trim(), a2 = $('sAdm2').value.trim();
       if (a1 && a1 !== a2) return toast('PIN ผู้ดูแลใหม่ทั้ง 2 ช่องไม่ตรงกัน');
@@ -2248,27 +2622,28 @@ async function renderSettings() {
   draw();
 }
 
-// ตั้งที่ตั้งบริษัท: เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่บริษัท (แบบแอปเรียกรถ)
-function companySheet(after) {
-  window.__afterHq = typeof after === 'function' ? after : null;
-  const cur = S.data.rules.company;
+// เลือกตำแหน่งบนแผนที่: เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่สถานที่ (แบบแอปเรียกรถ) หรือค้นหาจาก Google Maps
+// ใช้ทั้งตั้งที่ตั้งบริษัท/สาขา และเพิ่มลูกค้าประจำ
+function placeSheet(opt) {
+  const cur = opt.cur;
   const o = document.createElement('div'); o.className = 'mapov';
-  o.innerHTML = `<div class="maphead"><b>ตั้งที่ตั้งบริษัท</b><button id="hqclose">ปิด</button></div>
+  o.innerHTML = `<div class="maphead"><b>${esc(opt.title)}</b><button id="hqclose">ปิด</button></div>
     <div style="position:relative;flex:1">
       <div id="hqmap" style="position:absolute;inset:0"></div>
       <div class="centerpin" aria-hidden="true">${hqIcon().options.html}</div>
-      <div class="hqsearch"><div class="stop" style="margin:0"><input class="f" id="hqq" placeholder="ค้นหาชื่อบริษัท หรือวางลิงก์ Google Maps" enterkeyhint="search"><button class="btn sm" id="hqfind">ค้นหา</button></div><div id="hqres"></div></div>
+      <div class="hqsearch"><div class="stop" style="margin:0"><input class="f" id="hqq" placeholder="ค้นหาชื่อสถานที่ หรือวางลิงก์ Google Maps" enterkeyhint="search"><button class="btn sm" id="hqfind">ค้นหา</button></div><div id="hqres"></div></div>
     </div>
     <div class="hqfoot">
-      <p class="small" style="margin:0 0 10px">เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่บริษัท หรือกดใช้ตำแหน่งปัจจุบันถ้าคุณอยู่ที่บริษัท</p>
-      <input class="f" id="hqname" placeholder="ชื่อเรียก เช่น บริษัท เมืองเกษตร" value="${esc(cur?.name && cur.name !== 'บริษัท' ? cur.name : '')}">
+      <p class="small" style="margin:0 0 10px">เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่สถานที่ หรือกดใช้ตำแหน่งปัจจุบันถ้าคุณอยู่ที่นั่น</p>
+      <input class="f" id="hqname" placeholder="${esc(opt.namePh || 'ชื่อเรียก')}" value="${esc(cur?.name && cur.name !== 'บริษัท' ? cur.name : '')}">
       <div class="two mt"><button class="btn line" id="hqhere">ใช้ตำแหน่งปัจจุบัน</button><button class="btn" id="hqsave">บันทึกตำแหน่งนี้</button></div></div>`;
   document.body.appendChild(o);
   $('hqclose').onclick = () => o.remove();
-  if (!window.L) { $('hqmap').innerHTML = '<p class="empty" style="margin:16px">โหลดแผนที่ไม่ได้ ใช้ปุ่ม "ใช้ตำแหน่งปัจจุบัน" แทนได้</p>'; }
+  if (!window.L) { $('hqmap').innerHTML = '<p class="empty" style="margin:16px">โหลดแผนที่ไม่ได้ ใช้ปุ่ม "ใช้ตำแหน่งปัจจุบัน" หรือค้นหาแทนได้</p>'; }
   const m = window.L ? makeMap('hqmap') : null;
-  if (m) m.setView(cur ? [cur.lat, cur.lng] : [13.7563, 100.5018], cur ? 17 : 11);
-  let picked = null; // ใช้เมื่อไม่มีแผนที่
+  const start = cur || PLACES()[0];
+  if (m) m.setView(start ? [start.lat, start.lng] : [13.7563, 100.5018], cur ? 17 : start ? 12 : 11);
+  let picked = null, addr = cur?.address || ''; // picked ใช้เมื่อไม่มีแผนที่
   $('hqhere').onclick = async () => {
     $('hqhere').textContent = 'กำลังหาตำแหน่ง…';
     const p = await getPos();
@@ -2283,7 +2658,7 @@ function companySheet(after) {
       const rs = await call('place', { q, pin: S.adminPin });
       $('hqres').innerHTML = `<div class="res">${rs.length ? rs.map((r, i) => `<button type="button" data-i="${i}"><b>${esc(r.name)}</b><span>${esc(r.address || '')}</span></button>`).join('') : '<div class="msg">ไม่พบ ลองพิมพ์ชื่ออื่น หรือวางลิงก์จาก Google Maps</div>'}</div>`;
       $('hqres').querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
-        const r = rs[+b.dataset.i]; picked = r; $('hqres').innerHTML = '';
+        const r = rs[+b.dataset.i]; picked = r; addr = r.address || ''; $('hqres').innerHTML = '';
         if (!$('hqname').value) $('hqname').value = r.name;
         if (m) m.setView([r.lat, r.lng], 18);
       });
@@ -2292,13 +2667,21 @@ function companySheet(after) {
   $('hqfind').onclick = find;
   $('hqq').onkeydown = e => { if (e.key === 'Enter') find(); };
   $('hqsave').onclick = async () => {
-    const c = m ? m.getCenter() : picked;
+    const c = m ? m.getCenter() : picked, name = $('hqname').value.trim();
     if (!c) return toast('เลือกตำแหน่งก่อนนะครับ');
-    try {
-      const r = await call('setCompany', { pin: S.adminPin, lat: c.lat, lng: c.lng, name: $('hqname').value.trim() || 'บริษัท' });
-      S.data.rules.company = r; o.remove(); (window.__afterHq || drawReport)(); toast('บันทึกที่ตั้งบริษัทแล้ว');
-    } catch (e) { toast(e.message, 4000); }
+    if (!name) { $('hqname').focus(); return toast('ตั้งชื่อเรียกก่อนนะครับ'); }
+    const b = $('hqsave'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
+    try { await opt.onSave({ lat: c.lat, lng: c.lng, name, address: addr }); o.remove(); }
+    catch (e) { toast(e.message, 4000); b.disabled = false; b.textContent = 'บันทึกตำแหน่งนี้'; }
   };
+}
+// ตั้งที่ตั้งหลัก (ปุ่มเดิมในหน้าภาพรวม)
+function companySheet(after) {
+  placeSheet({ title: 'ตั้งที่ตั้งบริษัท', cur: PLACES()[0], namePh: 'ชื่อเรียก เช่น บริษัท เมืองเกษตร', onSave: async v => {
+    const r = await call('setCompany', { pin: S.adminPin, lat: v.lat, lng: v.lng, name: v.name || 'บริษัท' });
+    S.data.rules.company = r; if (S.data.places && S.data.places.length) S.data.places[0] = r; else S.data.places = [r];
+    (typeof after === 'function' ? after : drawReport)(); toast('บันทึกที่ตั้งบริษัทแล้ว');
+  } });
 }
 
 // ผู้ดูแลบันทึกว่าตรวจรายการแล้ว พร้อมหมายเหตุ
