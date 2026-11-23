@@ -308,6 +308,21 @@ body.admin .atabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:6;
 .curow .lwho{flex:1;min-width:0}.curow .lwho b{font-size:16px}.curow .lwho span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .offln{color:#1D3F8A}
 .bar select.f{width:auto;max-width:42%;flex:0 1 auto}
+.sbox2{flex:1;position:relative;display:flex;align-items:center}
+.sbox2 .sic{position:absolute;left:14px;color:var(--muted);display:flex;pointer-events:none}
+.sbox2 .f{padding-left:44px;border-radius:999px}
+.sugwrap{margin:-4px 0 10px 34px}
+.sug{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 24px -12px rgba(17,17,19,.25)}
+.sug button{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:11px 14px;color:var(--ink)}
+.sug button:last-of-type{border-bottom:0}.sug button:active{background:#F1F3F4}
+.sug .si{width:30px;height:30px;border-radius:50%;background:#F1F3F4;color:#5F6368;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sug .si.cus{background:#FFF4D6;color:#C98A00}.sug .si.rec{background:#EEF4FF;color:#1A73E8}
+.sug .stx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.sug .sn{font-size:16px;font-weight:400;line-height:1.35}.sug .sn b{font-weight:700}
+.sug .sa{font-size:13px;color:#5F6368;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sug .msg{padding:11px 14px;font-size:14px;color:var(--muted);border-top:1px solid var(--line)}
+.sug .msg:first-child{border-top:0}
+.hqsearch .sug{margin-top:6px}
 .fromrow{display:flex;align-items:center;gap:10px;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:12px}
 .fromrow .fic{width:36px;height:36px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fromrow .fx2{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -693,6 +708,8 @@ const demo = {
     if (action === 'route') return demoRoute(p.stops, p.from, p.end);
     if (action === 'nav') return demoNav(p.from, p.to);
     if (action === 'place') return demoPlace(p.q);
+    if (action === 'suggest') { const q = String(p.q || '').trim(); if (q.length < 2) return []; return demoPlace(q).concat([{ name: q + ' (สำนักงานใหญ่)', address: 'แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร (ตัวอย่าง)', lat: 13.81, lng: 100.56 }]).map((x, i) => ({ ...x, src: i % 2 ? 'osm' : 'g' })); }
+    if (action === 'placesKey') { if (p.pin !== '9999') throw new Error('PIN ผู้ดูแลไม่ถูกต้อง'); throw new Error('โหมดทดลองใส่คีย์ไม่ได้ ลองในระบบจริง'); }
     if (action === 'receipt') { // โหมดทดลอง: แกล้งอ่านใบเสร็จ ของจริงใช้ OCR ของ Google Drive
       await new Promise(r => setTimeout(r, 900));
       const price = DEMO_CFG.fuel.prices.diesel, liters = 30.12;
@@ -957,6 +974,8 @@ const ICON = {
   car: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8"/><path d="M7 14h.01M17 14h.01"/><rect x="3" y="10" width="18" height="8" rx="2"/><path d="M5 18v2M19 18v2"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   pin: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  mappin: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.6A2.6 2.6 0 1 1 12 6.4a2.6 2.6 0 0 1 0 5.2z"/></svg>',
   star: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>',
   clock: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>',
@@ -2000,31 +2019,16 @@ function renderCheckout(c) {
       ? `<div class="pick"><span class="n">${i + 1}</span><div class="pk"><b>${esc(x.pick.name)}</b><span>${esc(x.pick.address || '')}</span></div>
           <button class="rm" type="button" data-rm="${i}" aria-label="เปลี่ยนสถานที่ที่ ${i + 1}">×</button></div>`
       : `<div class="stop"><span class="n">${i + 1}</span>
-          <input class="f" data-i="${i}" value="${esc(x.q)}" placeholder="${i ? 'จุดแวะถัดไป' : 'พิมพ์ชื่อสถานที่ เช่น โฮมโปร บางนา'}" aria-label="สถานที่ที่ ${i + 1}" enterkeyhint="search">
-          <button class="btn sm" type="button" data-find="${i}">${x.busy ? '…' : 'ค้นหา'}</button></div>
-        ${x.results ? `<div class="res">${x.results.length
-          ? x.results.map((r, j) => `<button type="button" data-pick="${i}:${j}"><b>${esc(r.name)}</b><span>${esc(r.address || '')}</span></button>`).join('')
-          : '<div class="msg">ไม่พบใน Google Maps ลองพิมพ์ชื่ออื่น หรือวางลิงก์ที่แชร์จากแอป Google Maps</div>'}</div>` : ''}
-        ${i === 0 && !x.results ? '<p class="tip">หาไม่เจอ? เปิดแอป Google Maps กดแชร์สถานที่ แล้ววางลิงก์ในช่องนี้ได้</p>' : ''}`).join('');
+          <div class="sbox2"><span class="sic">${ICON.search}</span><input class="f" data-i="${i}" value="${esc(x.q)}" placeholder="${i ? 'ค้นหาจุดแวะถัดไป' : 'ค้นหาสถานที่ เช่น โฮมโปร บางนา'}" aria-label="สถานที่ที่ ${i + 1}" enterkeyhint="search"></div></div>
+        <div class="sugwrap" id="sug${i}"></div>
+        ${i === 0 ? '<p class="tip">หาไม่เจอ? เปิดแอป Google Maps กดแชร์สถานที่ แล้ววางลิงก์ในช่องนี้ได้</p>' : ''}`).join('');
     $('addStop').style.display = P.stops.length >= 8 ? 'none' : 'block';
     $('stops').querySelectorAll('input[data-i]').forEach(inp => {
-      inp.oninput = () => { P.stops[+inp.dataset.i].q = inp.value; };
-      inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); find(+inp.dataset.i); } };
+      const i = +inp.dataset.i;
+      inp.addEventListener('input', () => { P.stops[i].q = inp.value; });
+      placeAuto(inp, $('sug' + i), pk => { P.stops[i] = { q: '', pick: pk }; drawStops(); clearRoute(); if (allPicked()) calc(); },
+        { pos: () => P.gp || P.from });
     });
-  };
-  const find = async i => {
-    const x = P.stops[i];
-    if (!x.q.trim()) return toast('พิมพ์ชื่อสถานที่ก่อน');
-    x.busy = true; drawStops();
-    try { x.results = await call('place', { q: x.q }); }
-    catch (e) { x.results = null; toast(netErr(e) ? 'ไม่มีสัญญาณ ค้นหาสถานที่ไม่ได้ เลือกจากสถานที่ประจำด้านบนแทนได้' : e.message, 5000); }
-    x.busy = false; drawStops();
-    if (x.results && x.results.length === 1 && /^https?:/.test(x.q)) choose(i, 0); // ลิงก์ได้ผลเดียว เลือกให้เลย
-  };
-  const choose = (i, j) => {
-    P.stops[i].pick = P.stops[i].results[j]; P.stops[i].results = null;
-    drawStops(); clearRoute();
-    if (allPicked()) calc();
   };
   const addPick = x => {
     const pk = { name: x.name, address: x.address || '', lat: +x.lat, lng: +x.lng };
@@ -2033,9 +2037,7 @@ function renderCheckout(c) {
     drawStops(); clearRoute(); if (allPicked()) calc();
   };
   $('stops').onclick = e => {
-    const f = e.target.closest('[data-find]'), pk = e.target.closest('[data-pick]'), rm = e.target.closest('[data-rm]');
-    if (f) find(+f.dataset.find);
-    if (pk) { const [i, j] = pk.dataset.pick.split(':').map(Number); choose(i, j); }
+    const rm = e.target.closest('[data-rm]');
     if (rm) {
       const i = +rm.dataset.rm;
       if (P.stops.length > 1) P.stops.splice(i, 1); else P.stops[i] = { q: '' };
@@ -2111,7 +2113,7 @@ function renderCheckout(c) {
     if (!P.photo) return toast('ถ่ายรูปหน้าปัดก่อนนะครับ');
     if (!odoV) return toast('กรอกเลขไมล์ก่อนนะครับ');
     if (!purpose) return toast('เลือกว่าไปทำอะไรก่อนนะครับ');
-    if (!allPicked()) { $('s4').scrollIntoView({ behavior: 'smooth' }); return toast('เลือกสถานที่ให้ครบทุกจุด (ค้นหา หรือแตะจากสถานที่ประจำ)'); }
+    if (!allPicked()) { $('s4').scrollIntoView({ behavior: 'smooth' }); return toast('เลือกสถานที่จากรายการที่ขึ้นมาให้ครบทุกจุด'); }
     if (!P.route && !(await calc()) && !P.routeNet) return;
     const stops = picked();
     const b = $('submit'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
@@ -2140,6 +2142,53 @@ function renderCheckout(c) {
     } catch (e) { toast(e.message, 5000); b.disabled = false; b.textContent = 'ยืนยันรับรถ'; }
   };
   window.scrollTo(0, 0);
+}
+
+// ---------- ช่องค้นหาสถานที่แบบ Google Maps: พิมพ์แล้วขึ้นรายการทันที ทั้งชื่อ ที่อยู่ และชื่อใกล้เคียง ----------
+// ลูกค้าประจำ/ที่เคยไปขึ้นก่อนทันที ตามด้วยผลจาก Google (หรือ OpenStreetMap ถ้ายังไม่ได้ใส่คีย์)
+function placeAuto(inp, box, onPick, opt = {}) {
+  let timer = null, seq = 0, session = rid() + rid() + rid();
+  const local = q => {
+    const ql = q.toLowerCase(), seen = {};
+    return [...(S.data.customers || []).map(x => ({ ...x, src: 'cus' })), ...(S.data.recent || []).map(x => ({ ...x, src: 'rec' }))]
+      .filter(x => ql && (x.name + ' ' + (x.address || '')).toLowerCase().includes(ql) && !seen[x.name] && (seen[x.name] = 1)).slice(0, 4);
+  };
+  const mark = (name, q) => { const i = q ? name.toLowerCase().indexOf(q.toLowerCase()) : -1; return i < 0 ? esc(name) : esc(name.slice(0, i)) + '<b>' + esc(name.slice(i, i + q.length)) + '</b>' + esc(name.slice(i + q.length)); };
+  const icon = x => x.src === 'cus' ? ICON.star : x.src === 'rec' ? ICON.clock : ICON.mappin;
+  const draw = (items, busy, msg) => {
+    const q = inp.value.trim();
+    if (!q) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="sug" role="listbox">${items.map((x, i) => `<button type="button" role="option" data-s="${i}">
+        <span class="si ${x.src}">${icon(x)}</span><span class="stx"><span class="sn">${mark(x.name, q)}</span>${x.address ? `<span class="sa">${esc(x.address)}</span>` : ''}</span></button>`).join('')}
+      ${busy ? '<div class="msg"><span class="spin"></span>กำลังค้นหา…</div>' : ''}
+      ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
+      ${!busy && !items.length && !msg && q.length >= 2 ? '<div class="msg">ไม่พบ ลองพิมพ์ชื่ออื่น หรือวางลิงก์ที่แชร์จากแอป Google Maps</div>' : ''}</div>`;
+    box.querySelectorAll('[data-s]').forEach(b => b.onclick = async () => {
+      const x = items[+b.dataset.s];
+      if (x.lat == null || x.lat === '') {
+        b.querySelector('.sa') ? b.querySelector('.sa').textContent = 'กำลังเปิด…' : 0;
+        try { const d = await call('placeDetail', { id: x.id, session }); x.lat = d.lat; x.lng = d.lng; x.address = d.address || x.address; x.name = x.name || d.name; }
+        catch (e) { return toast(netErr(e) ? 'ไม่มีสัญญาณ เปิดสถานที่นี้ไม่ได้' : e.message, 4000); }
+      }
+      session = rid() + rid() + rid(); box.innerHTML = '';
+      onPick({ name: x.name, address: x.address || '', lat: +x.lat, lng: +x.lng });
+    });
+  };
+  const go = async () => {
+    const q = inp.value.trim(), my = ++seq, L = local(q);
+    if (q.length < 2 && !/^https?:/.test(q)) { draw(L, false); return; }
+    draw(L, true);
+    const p = opt.pos ? opt.pos() : null;
+    try {
+      const r = await call('suggest', { q, lat: p && p.lat, lng: p && p.lng, session, pin: opt.pin });
+      if (my !== seq) return;
+      draw([...L, ...r.filter(x => !L.some(l => l.name === x.name))]);
+    } catch (e) { if (my === seq) draw(L, false, netErr(e) ? 'ไม่มีสัญญาณ ค้นหาออนไลน์ไม่ได้ เลือกจากสถานที่ประจำแทนได้' : e.message); }
+  };
+  inp.setAttribute('autocomplete', 'off');
+  inp.addEventListener('input', () => { clearTimeout(timer); const q = inp.value.trim(); draw(local(q), q.length >= 2); timer = setTimeout(go, /^https?:/.test(q) ? 50 : 350); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); go(); } });
+  return { go };
 }
 
 // เลือกจากรายการ (แผ่นเลื่อนขึ้นจากด้านล่าง)
@@ -2554,6 +2603,19 @@ async function renderSettings() {
         : '<div class="sbox"><p class="note warn" style="margin:0">ยังไม่ได้ตั้งที่ตั้ง ต้องตั้งก่อน ระบบถึงจะคำนวณระยะทางได้</p></div>'}
       <button class="add" id="sAddPlace" style="padding-left:0">+ เพิ่มที่ตั้ง</button>
 
+      <h3 class="h2">ค้นหาสถานที่แบบ Google Maps</h3>
+      <div class="sbox">
+        <p class="small" style="margin:0 0 8px">${st.hasPlacesKey ? '<b style="color:var(--ok)">เปิดใช้แล้ว</b> พิมพ์ชื่อร้าน/บริษัทแล้วขึ้นรายการจาก Google Maps' : 'ตอนนี้ใช้แผนที่ฟรี (OpenStreetMap) ร้านเล็ก ๆ บางร้านอาจหาไม่เจอ ใส่คีย์ Google Places เพื่อให้ค้นหาได้ครบแบบ Google Maps'}</p>
+        <div class="stop" style="margin:0"><input class="f" id="pkey" placeholder="${st.hasPlacesKey ? 'ใส่คีย์ใหม่เพื่อเปลี่ยน' : 'วางคีย์ Google Places (AIza…)'}" autocomplete="off" spellcheck="false"><button class="btn sm" id="pkeySave" type="button">บันทึก</button></div>
+        ${st.hasPlacesKey ? '<button class="linkbtn" id="pkeyDel" type="button" style="margin:8px 0 0">เลิกใช้คีย์</button>' : ''}
+        <details class="small mt"><summary>วิธีขอคีย์ (ฟรีสำหรับการใช้งานระดับนี้)</summary><ol style="margin:8px 0 0;padding-left:20px;line-height:1.7">
+          <li>เข้า console.cloud.google.com ด้วยบัญชี Google ของบริษัท สร้างโปรเจกต์ใหม่</li>
+          <li>ผูกบัญชีชำระเงิน (ต้องใส่บัตร แต่ใช้ไม่เกินโควตาฟรีรายเดือนจะไม่เสียเงิน)</li>
+          <li>เปิดใช้ "Places API (New)" ที่เมนู APIs &amp; Services → Library</li>
+          <li>ไปที่ Credentials → Create credentials → API key แล้วตั้ง API restrictions ให้ใช้ได้แค่ Places API (New)</li>
+          <li>คัดลอกคีย์มาวางช่องด้านบน แล้วกดบันทึก ระบบจะทดสอบให้ก่อน</li></ol></details>
+      </div>
+
       <h3 class="h2">ลูกค้า/สถานที่ประจำ</h3>
       <p class="small" style="margin-top:-6px">คนขับแตะเลือกได้ทันทีตอนรับรถ ไม่ต้องค้นหาทุกครั้ง บันทึกทันทีเมื่อเพิ่มหรือลบ</p>
       ${PL.customers.length > 6 ? `<input class="f" id="cusQ" placeholder="ค้นหาในรายชื่อ ${PL.customers.length} รายการ" value="${esc(PL.cq)}" style="margin-bottom:8px">` : ''}
@@ -2601,6 +2663,14 @@ async function renderSettings() {
       placeSheet({ title: 'แก้ที่ตั้ง', cur, namePh: 'ชื่อเรียก เช่น สำนักงานใหญ่ โกดังบางพลี', onSave: async v => { const l = PL.places.map(x => ({ ...x })); l[i] = { ...l[i], ...v }; await savePlaces(l); } }); });
     $app.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { const i = +b.dataset.pdel;
       ask(`ลบที่ตั้ง "${PL.places[i].name}"? รายการใช้รถเก่ายังอยู่ครบ`, 'ลบ', async () => { try { await savePlaces(PL.places.filter((_, j) => j !== i)); } catch (e) { toast(e.message, 4000); } }); });
+    $('pkeySave').onclick = async () => {
+      const k = $('pkey').value.trim(); if (!k) return toast('วางคีย์ก่อนนะครับ');
+      const b = $('pkeySave'); b.disabled = true; b.textContent = 'กำลังทดสอบ…';
+      try { await call('placesKey', { pin: S.adminPin, key: k }); st.hasPlacesKey = true; toast('ทดสอบผ่าน เปิดใช้ค้นหาแบบ Google Maps แล้ว', 4000); draw(); }
+      catch (e) { toast(e.message, 7000); b.disabled = false; b.textContent = 'บันทึก'; }
+    };
+    if ($('pkeyDel')) $('pkeyDel').onclick = () => ask('เลิกใช้คีย์ Google Places? การค้นหาจะกลับไปใช้แผนที่ฟรี', 'เลิกใช้', async () => {
+      try { await call('placesKey', { pin: S.adminPin, key: '' }); st.hasPlacesKey = false; draw(); } catch (e) { toast(e.message, 4000); } });
     $('sAddPlace').onclick = () => placeSheet({ title: 'เพิ่มที่ตั้ง', cur: null, namePh: 'ชื่อเรียก เช่น สาขาอ้อมใหญ่ โกดังบางพลี', onSave: v => savePlaces([...PL.places, v]) });
     $app.querySelectorAll('[data-cdel]').forEach(b => b.onclick = () => { const i = +b.dataset.cdel;
       ask(`ลบ "${PL.customers[i].name}" ออกจากรายชื่อ?`, 'ลบ', async () => { try { await saveCus(PL.customers.filter((_, j) => j !== i)); } catch (e) { toast(e.message, 4000); } }); });
@@ -2631,7 +2701,7 @@ function placeSheet(opt) {
     <div style="position:relative;flex:1">
       <div id="hqmap" style="position:absolute;inset:0"></div>
       <div class="centerpin" aria-hidden="true">${hqIcon().options.html}</div>
-      <div class="hqsearch"><div class="stop" style="margin:0"><input class="f" id="hqq" placeholder="ค้นหาชื่อสถานที่ หรือวางลิงก์ Google Maps" enterkeyhint="search"><button class="btn sm" id="hqfind">ค้นหา</button></div><div id="hqres"></div></div>
+      <div class="hqsearch"><div class="sbox2"><span class="sic">${ICON.search}</span><input class="f" id="hqq" placeholder="ค้นหาชื่อสถานที่ หรือวางลิงก์ Google Maps" enterkeyhint="search"></div><div id="hqres"></div></div>
     </div>
     <div class="hqfoot">
       <p class="small" style="margin:0 0 10px">เลื่อนแผนที่ให้หมุดตรงกลางอยู่ที่สถานที่ หรือกดใช้ตำแหน่งปัจจุบันถ้าคุณอยู่ที่นั่น</p>
@@ -2651,21 +2721,11 @@ function placeSheet(opt) {
     if (!p) return toast('หาตำแหน่งไม่ได้ ตรวจว่าอนุญาตให้เว็บใช้ตำแหน่งแล้ว', 4000);
     picked = p; if (m) m.setView([p.lat, p.lng], 18); else toast('ได้ตำแหน่งแล้ว กดบันทึกได้เลย');
   };
-  const find = async () => {
-    const q = $('hqq').value.trim(); if (!q) return;
-    $('hqres').innerHTML = '<div class="res"><div class="msg" style="color:var(--muted)">กำลังค้นหา…</div></div>';
-    try {
-      const rs = await call('place', { q, pin: S.adminPin });
-      $('hqres').innerHTML = `<div class="res">${rs.length ? rs.map((r, i) => `<button type="button" data-i="${i}"><b>${esc(r.name)}</b><span>${esc(r.address || '')}</span></button>`).join('') : '<div class="msg">ไม่พบ ลองพิมพ์ชื่ออื่น หรือวางลิงก์จาก Google Maps</div>'}</div>`;
-      $('hqres').querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
-        const r = rs[+b.dataset.i]; picked = r; addr = r.address || ''; $('hqres').innerHTML = '';
-        if (!$('hqname').value) $('hqname').value = r.name;
-        if (m) m.setView([r.lat, r.lng], 18);
-      });
-    } catch (e) { $('hqres').innerHTML = ''; toast(e.message, 4000); }
-  };
-  $('hqfind').onclick = find;
-  $('hqq').onkeydown = e => { if (e.key === 'Enter') find(); };
+  placeAuto($('hqq'), $('hqres'), r => {
+    picked = r; addr = r.address || ''; $('hqq').value = r.name;
+    if (!$('hqname').value) $('hqname').value = r.name;
+    if (m) m.setView([r.lat, r.lng], 18);
+  }, { pin: S.adminPin, pos: () => m ? m.getCenter() : start });
   $('hqsave').onclick = async () => {
     const c = m ? m.getCenter() : picked, name = $('hqname').value.trim();
     if (!c) return toast('เลือกตำแหน่งก่อนนะครับ');
